@@ -44,6 +44,7 @@ function getApp(): App {
   return _app;
 }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const adminAuth = new Proxy({} as ReturnType<typeof getAdminAuth>, {
   get(_, prop) {
     return (getAdminAuth(getApp()) as any)[prop];
@@ -63,3 +64,4 @@ export const adminStorage = new Proxy({} as ReturnType<typeof getAdminStorage>, 
     return (getAdminStorage(getApp()) as any)[prop];
   },
 });
+/* eslint-enable @typescript-eslint/no-explicit-any */
