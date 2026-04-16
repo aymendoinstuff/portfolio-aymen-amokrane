@@ -9,7 +9,7 @@
 import React from "react";
 
 // ===== 1) Types =====
-export type BlockType =
+type BlockType =
   | "heading"
   | "subheading"
   | "paragraph"
@@ -23,7 +23,7 @@ export type BlockType =
   | "footer"
   | "link";
 
-export type Block = {
+type Block = {
   type: BlockType;
   content: string;
   order: number;
@@ -37,7 +37,7 @@ export type Block = {
 
 // ===== 2) Sample data (replace with your imported data) =====
 // You can import your real data: `import { contentBlocks } from "@/lib/content"`.
-export const contentBlocks: Block[] = [
+const contentBlocks: Block[] = [
   { type: "heading", content: "WeeWee - Branding Case Study", order: 1 },
 
   // Intro meta
