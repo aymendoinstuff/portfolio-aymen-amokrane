@@ -5,11 +5,11 @@ import SectionTitle from "@/components/SectionTitle";
 import { Btn, Field, Input, Select } from "@/components/public/common/ui";
 import { X } from "lucide-react";
 import {
-  PRIORITY,
-  REQUIREMENTS,
-  KEYWORDS,
-  type PriorityKey,
-} from "@/data/contact";
+  PROPOSED_PROJECTS,
+  PROJECT_REQUIREMENTS,
+  PROJECT_TAGS,
+  PriorityKey,
+} from "@/lib/data/contact";
 
 // ----------------------
 // Types matching the API schema (client-side)
@@ -154,11 +154,11 @@ function PillTab({
 function PriorityTabs({ onOpen }: { onOpen: (k: PriorityKey) => void }) {
   return (
     <div className="flex flex-wrap justify-center gap-4 w-full max-w-[980px] mx-auto">
-      {PRIORITY.map((p) => (
+      {PROPOSED_PROJECTS.map((p) => (
         <PillTab
           key={p.key}
           label={p.label}
-          keywords={KEYWORDS[p.key]}
+          keywords={PROJECT_TAGS[p.key]}
           onClick={() => onOpen(p.key)}
         />
       ))}
@@ -167,7 +167,7 @@ function PriorityTabs({ onOpen }: { onOpen: (k: PriorityKey) => void }) {
 }
 
 // ----------------------
-// Collab modal (collects name/email; other fields come from REQUIREMENTS)
+// Collab modal (collects name/email; other fields come from PROJECT_REQUIREMENTS)
 // ----------------------
 function RequirementModal({
   open,
@@ -176,9 +176,12 @@ function RequirementModal({
   open: PriorityKey | null;
   onClose: () => void;
 }) {
-  const data = useMemo(() => (open ? REQUIREMENTS[open] : null), [open]);
+  const data = useMemo(
+    () => (open ? PROJECT_REQUIREMENTS[open] : null),
+    [open]
+  );
   const title = useMemo(
-    () => PRIORITY.find((p) => p.key === open)?.label ?? "",
+    () => PROPOSED_PROJECTS.find((p) => p.key === open)?.label ?? "",
     [open]
   );
 
@@ -205,14 +208,15 @@ function RequirementModal({
       return;
     }
 
-    // Map REQUIREMENTS to all required schema fields
+    // Map PROJECT_REQUIREMENTS to all required schema fields
     const payload: CollabPayload = {
       kind: "collab",
       priorityKey: (open as CollabPayload["priorityKey"]) ?? undefined,
       name,
       email,
       projectName:
-        PRIORITY.find((p) => p.key === open)?.label ?? "Priority Project",
+        PROPOSED_PROJECTS.find((p) => p.key === open)?.label ??
+        "Priority Project",
       industry: data?.industryDefault || "General",
       projectType: data?.projectTypeDefault || "Branding",
 

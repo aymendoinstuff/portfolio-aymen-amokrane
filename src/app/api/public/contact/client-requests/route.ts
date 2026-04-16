@@ -1,4 +1,4 @@
-import { OfferCreateInput, repoCreateOffer, repoListOffers } from "@/lib/repositories/contact";
+import { OfferCreateInput, repoCreateOffer } from "@/lib/repositories/contact";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -22,17 +22,6 @@ const OfferSchema = z.object({
     .enum(["cafe", "esports", "fintech", "event", "logistics"])
     .optional(),
 });
-
-export async function GET(req: Request) {
-  // Optional filters: ?limit=50&kind=collab
-  
-  const { searchParams } = new URL(req.url);
-  const max = Math.min(Number(searchParams.get("limit") ?? 24), 100);
-  const kind = searchParams.get("kind") as "collab" | "job" | null;
-
-  const items = await repoListOffers({ limit: max, kind: kind ?? undefined });
-  return NextResponse.json({ items });
-}
 
 export async function POST(req: Request) {
   try {
