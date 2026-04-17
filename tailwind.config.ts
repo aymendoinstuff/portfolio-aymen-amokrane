@@ -19,6 +19,7 @@ export default {
       animation: {
         'pg-jitter': 'pg-jitter 0.44s ease-in-out infinite',
         'pg-sweep': 'pg-sweep 0.9s ease-in-out infinite',
+        'fadeSlideUp': 'fadeSlideUp 0.22s ease-out',
       },
       keyframes: {
         'pg-jitter': {
@@ -33,6 +34,10 @@ export default {
           '0%': { backgroundPositionX: '150%' },
           '50%': { backgroundPositionX: '-50%' },
           '100%': { backgroundPositionX: '150%' },
+        },
+        'fadeSlideUp': {
+          '0%': { opacity: '0', transform: 'translateY(12px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },

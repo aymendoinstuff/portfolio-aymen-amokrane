@@ -2,16 +2,18 @@
 import ProjectForm from "@/components/admin/ProjectForm";
 import { adminDb } from "@/lib/firebase/admin";
 
-export default async function ProjectPage(props: {
+export const dynamic = "force-dynamic";
+
+export default async function EditProjectPage(props: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await props.params; 
-  const ref = await adminDb.collection("projects").doc(id).get();
+  const { id } = await props.params;
+  const snap = await adminDb.collection("projects").doc(id).get();
 
   return (
-    <main className="grid gap-4">
-      <div className="text-xl font-semibold">Edit Project</div>
-      <ProjectForm id={id} initial={ref.exists ? (ref.data() as any) : {}} />
-    </main>
+    <ProjectForm
+      id={id}
+      initial={snap.exists ? (snap.data() as any) : {}}
+    />
   );
 }
