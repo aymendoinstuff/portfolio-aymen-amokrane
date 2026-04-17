@@ -11,6 +11,8 @@ import type { MediaItem } from "@/lib/types/common";
 import DropZone from "@/components/admin/ui/DropZone";
 import TagInput from "@/components/admin/ui/TagInput";
 import { toast, ToastContainer } from "@/components/admin/ui/Toast";
+import BlockEditor from "@/components/admin/BlockEditor";
+import type { ExtraBlock } from "@/lib/types/project";
 import {
   ArrowLeft,
   Loader2,
@@ -322,6 +324,9 @@ export default function ProjectForm({ id, initial }: Props) {
   });
 
   const [saving, setSaving] = useState(false);
+  const [blocks, setBlocks] = useState<ExtraBlock[]>(
+    initial?.extra?.blocks ?? []
+  );
 
   // Watched values
   const gallery: MediaItem[] = watch("main.gallery") ?? [];
@@ -396,6 +401,7 @@ export default function ProjectForm({ id, initial }: Props) {
           createdAt: initial?.general?.createdAt ?? Date.now(),
           updatedAt: Date.now(),
         },
+        extra: blocks.length > 0 ? { blocks } : undefined,
       };
       await setDoc(doc(firestore, "projects", _id), payload, { merge: true });
       toast.success("Project saved successfully");
@@ -554,6 +560,17 @@ export default function ProjectForm({ id, initial }: Props) {
                   defaultValue={(initial?.general?.quotes ?? []).join("\n")}
                 />
               </Field>
+            </SectionCard>
+
+            {/* LAYOUT BUILDER */}
+            <SectionCard
+              title="Page Layout"
+              icon={<span className="text-sm">⊞</span>}
+            >
+              <p className="text-xs text-gray-500 mb-4">
+                Build your project page block by block — like Pentagram. Drag to reorder.
+              </p>
+              <BlockEditor blocks={blocks} onChange={setBlocks} />
             </SectionCard>
           </div>
 
