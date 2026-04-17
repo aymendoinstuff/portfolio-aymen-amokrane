@@ -55,21 +55,34 @@ export type ProjectMain = {
 // (C) Extra Details — typed rich-content blocks
 export type BlockBase = { id: string };
 
+export type TextStyle = {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  align?: "left" | "center" | "right";
+  size?: "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  color?: string;
+  font?: "sans" | "serif" | "mono";
+};
+
 export type ParagraphBlock = BlockBase & {
   type: "paragraph";
   text: string;
+  style?: TextStyle;
 };
 
 export type HeadingBlock = BlockBase & {
   type: "heading";
   level: 1 | 2 | 3;
   text: string;
+  style?: TextStyle;
 };
 
 export type QuoteBlock = BlockBase & {
   type: "quote";
   text: string;
   cite?: string;
+  style?: TextStyle;
 };
 
 export type ImageBlock = BlockBase & {

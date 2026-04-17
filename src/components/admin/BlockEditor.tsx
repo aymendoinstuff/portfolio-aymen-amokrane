@@ -1,6 +1,6 @@
 "use client";
 
-import {
+import React, {
   useState,
   useRef,
   DragEvent,
@@ -14,8 +14,10 @@ import {
 } from "firebase/storage";
 import type {
   ExtraBlock,
+  TextStyle,
 } from "@/lib/types/project";
 import type { MediaItem } from "@/lib/types/common";
+import TextFormatBar from "@/components/admin/ui/TextFormatBar";
 import {
   GripVertical,
   Trash2,
@@ -230,6 +232,27 @@ function ImageSlot({
   );
 }
 
+// ─── style helpers ───────────────────────────────────────────
+function styleToClass(s?: TextStyle): string {
+  if (!s) return "";
+  const parts: string[] = [];
+  if (s.bold) parts.push("font-bold");
+  if (s.italic) parts.push("italic");
+  if (s.underline) parts.push("underline");
+  if (s.align === "center") parts.push("text-center");
+  if (s.align === "right") parts.push("text-right");
+  if (s.align === "left") parts.push("text-left");
+  if (s.size) parts.push(`text-${s.size}`);
+  if (s.font === "serif") parts.push("font-serif");
+  if (s.font === "mono") parts.push("font-mono");
+  return parts.join(" ");
+}
+
+function styleToInline(s?: TextStyle): React.CSSProperties {
+  if (!s?.color) return {};
+  return { color: s.color };
+}
+
 // ─── individual block renderers ──────────────────────────────
 function BlockContent({
   block,
@@ -299,9 +322,14 @@ function BlockContent({
   if (block.type === "quote") {
     return (
       <div className="grid gap-2">
+        <TextFormatBar
+          style={block.style}
+          onChange={(s) => onChange({ ...block, style: s })}
+        />
         <textarea
           rows={3}
-          className={`${textareaCls} text-lg font-medium`}
+          className={`${textareaCls} text-lg font-medium ${styleToClass(block.style)}`}
+          style={styleToInline(block.style)}
           placeholder="&ldquo;Your quote here…&rdquo;"
           value={block.text}
           onChange={(e) => onChange({ ...block, text: e.target.value })}
@@ -320,38 +348,52 @@ function BlockContent({
 
   if (block.type === "paragraph") {
     return (
-      <textarea
-        rows={4}
-        className={textareaCls}
-        placeholder="Write your paragraph…"
-        value={block.text}
-        onChange={(e) => onChange({ ...block, text: e.target.value })}
-      />
+      <div className="grid gap-2">
+        <TextFormatBar
+          style={block.style}
+          onChange={(s) => onChange({ ...block, style: s })}
+        />
+        <textarea
+          rows={4}
+          className={`${textareaCls} ${styleToClass(block.style)}`}
+          style={styleToInline(block.style)}
+          placeholder="Write your paragraph…"
+          value={block.text}
+          onChange={(e) => onChange({ ...block, text: e.target.value })}
+        />
+      </div>
     );
   }
 
   if (block.type === "heading") {
     return (
-      <div className="flex gap-2">
-        <select
-          className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-black transition-all shrink-0"
-          value={block.level}
-          onChange={(e) =>
-            onChange({
-              ...block,
-              level: Number(e.target.value) as 1 | 2 | 3,
-            })
-          }
-        >
-          <option value={1}>H1</option>
-          <option value={2}>H2</option>
-          <option value={3}>H3</option>
-        </select>
-        <input
-          className={inputCls}
-          placeholder="Section heading…"
-          value={block.text}
-          onChange={(e) => onChange({ ...block, text: e.target.value })}
+      <div className="grid gap-2">
+        <div className="flex gap-2">
+          <select
+            className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-black transition-all shrink-0"
+            value={block.level}
+            onChange={(e) =>
+              onChange({
+                ...block,
+                level: Number(e.target.value) as 1 | 2 | 3,
+              })
+            }
+          >
+            <option value={1}>H1</option>
+            <option value={2}>H2</option>
+            <option value={3}>H3</option>
+          </select>
+          <input
+            className={`${inputCls} ${styleToClass(block.style)}`}
+            style={styleToInline(block.style)}
+            placeholder="Section heading…"
+            value={block.text}
+            onChange={(e) => onChange({ ...block, text: e.target.value })}
+          />
+        </div>
+        <TextFormatBar
+          style={block.style}
+          onChange={(s) => onChange({ ...block, style: s })}
         />
       </div>
     );

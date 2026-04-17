@@ -1,13 +1,11 @@
 "use client";
 
-import { useMemo, useState, useRef, DragEvent } from "react";
+import { useMemo, useState } from "react";
 import { useForm, type DeepPartial } from "react-hook-form";
 import Link from "next/link";
-import { firestore, storage } from "@/lib/firebase/client";
+import { firestore } from "@/lib/firebase/client";
 import { doc, setDoc } from "firebase/firestore";
-import { ref as storageRef, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 import type { Project, ProjectTimeline, ProjectTeamMember } from "@/lib/types/project";
-import type { MediaItem } from "@/lib/types/common";
 import DropZone from "@/components/admin/ui/DropZone";
 import TagInput from "@/components/admin/ui/TagInput";
 import { toast, ToastContainer } from "@/components/admin/ui/Toast";
@@ -17,12 +15,9 @@ import {
   ArrowLeft,
   Loader2,
   Plus,
-  Trash2,
-  GripVertical,
   Eye,
   EyeOff,
   Image as ImageIcon,
-  Video,
   ExternalLink,
   Users,
   MapPin,
@@ -31,7 +26,6 @@ import {
   Briefcase,
   Globe,
   Github,
-  Upload as UploadIcon,
   X,
 } from "lucide-react";
 
@@ -109,175 +103,6 @@ const inputCls =
 const textareaCls =
   "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all resize-y placeholder:text-gray-400";
 
-// ---------- Gallery Item Upload ----------
-function GalleryItemUploader({
-  item,
-  index,
-  onChange,
-  onRemove,
-  isDragOver,
-  onDragStart,
-  onDragOver,
-  onDragEnd,
-  onDrop,
-}: {
-  item: MediaItem;
-  index: number;
-  onChange: (i: number, updated: Partial<MediaItem>) => void;
-  onRemove: (i: number) => void;
-  isDragOver: boolean;
-  onDragStart: (e: DragEvent<HTMLDivElement>) => void;
-  onDragOver: (e: DragEvent<HTMLDivElement>) => void;
-  onDragEnd: () => void;
-  onDrop: (e: DragEvent<HTMLDivElement>) => void;
-}) {
-  const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const uploadFile = (file: File) => {
-    setUploading(true);
-    const path = `uploads/${Date.now()}-${file.name}`;
-    const sRef = storageRef(storage, path);
-    const task = uploadBytesResumable(sRef, file);
-    task.on(
-      "state_changed",
-      (snap) =>
-        setProgress(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-      (err) => {
-        console.error(err);
-        setUploading(false);
-      },
-      async () => {
-        const url = await getDownloadURL(task.snapshot.ref);
-        onChange(index, { url });
-        setUploading(false);
-        setProgress(0);
-      }
-    );
-  };
-
-  return (
-    <div
-      draggable
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDragEnd={onDragEnd}
-      onDrop={onDrop}
-      className={[
-        "group relative bg-white border-2 rounded-xl overflow-hidden transition-all",
-        isDragOver
-          ? "border-black scale-[1.02] shadow-lg"
-          : "border-gray-200 hover:border-gray-300",
-      ].join(" ")}
-    >
-      {/* Drag handle */}
-      <div className="absolute top-2 left-2 z-10 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="bg-white/90 backdrop-blur-sm rounded-md p-1 shadow-sm">
-          <GripVertical size={14} className="text-gray-400" />
-        </div>
-      </div>
-
-      {/* Remove button */}
-      <button
-        type="button"
-        onClick={() => onRemove(index)}
-        className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm rounded-full p-1 shadow-sm hover:bg-red-50 hover:text-red-500"
-      >
-        <Trash2 size={14} />
-      </button>
-
-      {/* Media preview area */}
-      <div
-        className="relative aspect-video bg-gray-100 cursor-pointer"
-        onClick={() => fileInputRef.current?.click()}
-      >
-        {item.url ? (
-          item.type === "image" ? (
-            <img
-              src={item.url}
-              alt={item.alt || ""}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-1 text-gray-400">
-              <Video size={28} />
-              <span className="text-xs">Video</span>
-            </div>
-          )
-        ) : uploading ? (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-            <Loader2 size={20} className="animate-spin text-gray-400" />
-            <div className="w-24 h-1 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-black transition-all"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-gray-400 hover:text-gray-600 transition-colors">
-            <UploadIcon size={22} />
-            <span className="text-xs">Click to upload</span>
-          </div>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={item.type === "image" ? "image/*" : "video/*"}
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) uploadFile(file);
-            e.target.value = "";
-          }}
-        />
-      </div>
-
-      {/* Controls */}
-      <div className="p-3 grid gap-2">
-        {/* Type toggle */}
-        <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={() => onChange(index, { type: "image" })}
-            className={[
-              "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
-              item.type === "image"
-                ? "bg-black text-white"
-                : "bg-gray-100 text-gray-500 hover:bg-gray-200",
-            ].join(" ")}
-          >
-            <ImageIcon size={12} />
-            Image
-          </button>
-          <button
-            type="button"
-            onClick={() => onChange(index, { type: "video" })}
-            className={[
-              "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-medium transition-colors",
-              item.type === "video"
-                ? "bg-black text-white"
-                : "bg-gray-100 text-gray-500 hover:bg-gray-200",
-            ].join(" ")}
-          >
-            <Video size={12} />
-            Video
-          </button>
-        </div>
-
-        {/* Alt text */}
-        <input
-          value={item.alt ?? ""}
-          onChange={(e) => onChange(index, { alt: e.target.value || undefined })}
-          placeholder="Alt text (optional)"
-          className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:outline-none focus:border-black transition-all placeholder:text-gray-400"
-        />
-      </div>
-    </div>
-  );
-}
-
 // ---------- Main Component ----------
 export default function ProjectForm({ id, initial }: Props) {
   const defaultValues = useMemo<DeepPartial<Project>>(
@@ -329,7 +154,6 @@ export default function ProjectForm({ id, initial }: Props) {
   );
 
   // Watched values
-  const gallery: MediaItem[] = watch("main.gallery") ?? [];
   const team: ProjectTeamMember[] = watch("main.details.team") ?? [];
   const timeline = watch("main.details.timeline") as ProjectTimeline | undefined;
   const tags: string[] = watch("general.tags") ?? [];
@@ -342,49 +166,6 @@ export default function ProjectForm({ id, initial }: Props) {
   // Timeline helpers
   const isTimelineLabel = (tl?: ProjectTimeline): tl is { label: string } =>
     typeof tl === "object" && tl !== null && "label" in tl;
-
-  // Gallery drag-and-drop
-  const dragIndex = useRef<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-
-  const onGalleryDragStart = (i: number) => (e: DragEvent<HTMLDivElement>) => {
-    dragIndex.current = i;
-    e.dataTransfer.effectAllowed = "move";
-  };
-  const onGalleryDragOver = (i: number) => (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverIndex(i);
-  };
-  const onGalleryDragEnd = () => {
-    dragIndex.current = null;
-    setDragOverIndex(null);
-  };
-  const onGalleryDrop = (dropIndex: number) => (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const from = dragIndex.current;
-    if (from === null || from === dropIndex) return;
-    const next = [...gallery];
-    const [moved] = next.splice(from, 1);
-    next.splice(dropIndex, 0, moved);
-    setValue("main.gallery", next);
-    dragIndex.current = null;
-    setDragOverIndex(null);
-  };
-
-  const updateGalleryItem = (i: number, updated: Partial<MediaItem>) => {
-    const g = [...gallery];
-    g[i] = { ...g[i], ...updated };
-    setValue("main.gallery", g);
-  };
-
-  const removeGalleryItem = (i: number) => {
-    setValue("main.gallery", gallery.filter((_, ix) => ix !== i));
-  };
-
-  const addGalleryItem = (type: "image" | "video" = "image") => {
-    setValue("main.gallery", [...gallery, { type, url: "" } as MediaItem]);
-  };
 
   // Submit
   const onSubmit = async (data: Project) => {
@@ -509,57 +290,6 @@ export default function ProjectForm({ id, initial }: Props) {
                   />
                 </Field>
               </div>
-            </SectionCard>
-
-            {/* GALLERY */}
-            <SectionCard title="Gallery" icon={<ImageIcon size={14} />}>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                {gallery.map((item, i) => (
-                  <GalleryItemUploader
-                    key={i}
-                    item={item}
-                    index={i}
-                    onChange={updateGalleryItem}
-                    onRemove={removeGalleryItem}
-                    isDragOver={dragOverIndex === i}
-                    onDragStart={onGalleryDragStart(i)}
-                    onDragOver={onGalleryDragOver(i)}
-                    onDragEnd={onGalleryDragEnd}
-                    onDrop={onGalleryDrop(i)}
-                  />
-                ))}
-
-                {/* Add new item card */}
-                <div className="aspect-video border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-gray-400 hover:text-gray-600 transition-all cursor-pointer group"
-                  onClick={() => addGalleryItem("image")}
-                >
-                  <Plus size={22} className="group-hover:scale-110 transition-transform" />
-                  <span className="text-xs font-medium">Add media</span>
-                </div>
-              </div>
-              <p className="text-xs text-gray-400">
-                Drag cards to reorder. Supports images and videos.
-              </p>
-            </SectionCard>
-
-            {/* QUOTES */}
-            <SectionCard title="Quotes" icon={<span className="text-lg leading-none text-gray-400">&ldquo;</span>}>
-              <Field label="Project quotes" hint="One per line">
-                <textarea
-                  className={`${textareaCls} min-h-[80px]`}
-                  placeholder="Add memorable quotes from the project or client…"
-                  onChange={(e) =>
-                    setValue(
-                      "general.quotes",
-                      e.currentTarget.value
-                        .split("\n")
-                        .map((s) => s.trim())
-                        .filter(Boolean)
-                    )
-                  }
-                  defaultValue={(initial?.general?.quotes ?? []).join("\n")}
-                />
-              </Field>
             </SectionCard>
 
             {/* LAYOUT BUILDER */}
