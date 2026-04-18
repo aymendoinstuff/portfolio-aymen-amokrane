@@ -1,453 +1,246 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ArrowLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-
-import Placeholder from "@/components/public/common/Placeholder";
-import { Btn } from "@/components/public/common/ui";
-
-import type { MediaItem } from "@/lib/types/common";
 import type { Project } from "@/lib/types/project";
 import { BlocksRenderer } from "./BlocksRenderer";
 
-/**
- * ProjectViewer – aspect-aware grid + vertical notes
- * - Gallery uses a 2-col grid with ratio-based sizing:
- *   - 1400x700 (≈2:1) → full-width row (col-span-2)
- *   - 700x700 (1:1)   → two squares side-by-side
- *   - square + span2  → square featured across both columns
- * - Notes are a single vertical stack (Overview / Scope / Meta / Story)
- * - Gallery pane scales horizontally only to avoid “top margin” illusion
- */
-export default function ProjectViewer({
-  project,
-}: {
-  project: Project;
-}) {
-  const [aboutOpen, setAboutOpen] = useState(false);
+export default function ProjectViewer({ project }: { project: Project }) {
+  const [notesOpen, setNotesOpen] = useState(false);
+  const { general, main, extra } = project;
 
-  const { general, main } = project;
-
-  // Quotes + gallery mapping
-  const quotes = general.quotes ?? [];
-  const q0 = quotes[0] ?? "Make it simple, make it scale.";
-  const q1 = quotes[1] ?? "Systems that look good and behave well.";
-
-  const gallery = main.gallery as MediaItemWithDims[];
-  const hasGallery = gallery.length > 0;
-
-  // Close panel with Escape
-  useEscapeClose(aboutOpen, () => setAboutOpen(false));
+  useEscapeClose(notesOpen, () => setNotesOpen(false));
 
   return (
-    <main className="min-h-screen">
-      <ProjectHeader
-        title={general.title}
-        year={general.year}
-        aboutOpen={aboutOpen}
-        onToggleAbout={() => setAboutOpen((v) => !v)}
-      />
+    <main className="min-h-screen bg-white">
 
-      {/* Content + Notes */}
-      <div className="relative">
-        <div className="flex gap-0">
-          <motion.section
-            initial={false}
-            animate={{
-              width: aboutOpen ? "55%" : "100%",
-              scaleX: aboutOpen ? 0.94 : 1, // horizontal-only to avoid top gap
-              scaleY: 1,
-            }}
-            transition={{ type: "spring", stiffness: 180, damping: 22 }}
-            className="origin-top-right"
-            aria-label="Project gallery"
+      {/* ── Sticky header ── */}
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
+        <div className="max-w-screen-2xl mx-auto px-6 h-14 flex items-center justify-between">
+          <Link
+            href="/work"
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-black transition-colors"
           >
-            <div className="max-w-6xl mx-auto px-4">
-              <MediaFlow
-                title={general.title}
-                brief={main.brief}
-                gallery={gallery}
-                quoteA={q0}
-                quoteB={q1}
-                hasGallery={hasGallery}
+            <ArrowLeft size={15} />
+            Work
+          </Link>
+
+          <span className="text-sm font-semibold tracking-tight truncate max-w-xs">
+            {general.title}
+            <span className="text-gray-400 font-normal ml-2">{general.year}</span>
+          </span>
+
+          <button
+            onClick={() => setNotesOpen((v) => !v)}
+            className="text-sm px-4 py-1.5 border border-gray-200 rounded-full hover:border-black hover:bg-black hover:text-white transition-all font-medium"
+          >
+            Project Notes
+          </button>
+        </div>
+      </header>
+
+      <div className="relative flex">
+
+        {/* ── Main content — blocks ── */}
+        <div className="flex-1 min-w-0">
+
+          {/* Hero image */}
+          {general.heroUrl && (
+            <div className="relative w-full" style={{ aspectRatio: "16/7" }}>
+              <Image
+                src={general.heroUrl}
+                alt={general.title}
+                fill
+                className="object-cover"
+                sizes="100vw"
+                priority
               />
             </div>
-          </motion.section>
+          )}
 
-          <AnimatePresence>
-            {aboutOpen && (
-              <NotesDrawer onClose={() => setAboutOpen(false)}>
-                <NotesTabs project={project} />
-              </NotesDrawer>
+          {/* Project title block */}
+          <div className="max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-20 border-b border-gray-100">
+            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+              {main.details.client} — {general.year}
+            </p>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1] mb-5">
+              {general.title}
+            </h1>
+            {main.details.tagline && (
+              <p className="text-lg md:text-xl text-gray-500 max-w-2xl leading-relaxed">
+                {main.details.tagline}
+              </p>
             )}
-          </AnimatePresence>
+
+            {/* Tags */}
+            {general.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-6">
+                {general.tags.map((t) => (
+                  <span
+                    key={t}
+                    className="px-3 py-1 bg-gray-100 rounded-full text-xs font-semibold text-gray-600"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Blocks — the actual page content */}
+          {extra?.blocks?.length ? (
+            <BlocksRenderer blocks={extra.blocks} />
+          ) : (
+            <div className="max-w-3xl mx-auto px-6 py-20 text-gray-400 text-center">
+              <p className="text-lg">No content blocks yet.</p>
+              <p className="text-sm mt-1">Add blocks in the admin editor.</p>
+            </div>
+          )}
+
+          {/* Bottom padding */}
+          <div className="h-32" />
         </div>
+
+        {/* ── Notes drawer ── */}
+        <AnimatePresence>
+          {notesOpen && (
+            <motion.aside
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 360, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ type: "tween", duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="shrink-0 border-l border-gray-200 bg-white sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto z-30"
+            >
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+                <span className="text-sm font-semibold">Project Notes</span>
+                <button
+                  onClick={() => setNotesOpen(false)}
+                  className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-7 text-sm">
+                <NotesSection label="Overview">
+                  <NoteRow label="Client" value={main.details.client} />
+                  <NoteRow label="Sector" value={main.details.sector} />
+                  <NoteRow label="Discipline" value={main.details.discipline?.join(" / ")} />
+                  {main.details.summary && (
+                    <NoteRow label="Summary" value={main.details.summary} />
+                  )}
+                  {main.brief && (
+                    <div>
+                      <NoteLabel>Brief</NoteLabel>
+                      <p className="text-gray-600 leading-relaxed">{main.brief}</p>
+                    </div>
+                  )}
+                </NotesSection>
+
+                {(main.details.services?.length || main.details.deliverables?.length) && (
+                  <NotesSection label="Scope">
+                    {main.details.services?.length ? (
+                      <NoteList label="Services" items={main.details.services} />
+                    ) : null}
+                    {main.details.deliverables?.length ? (
+                      <NoteList label="Deliverables" items={main.details.deliverables} />
+                    ) : null}
+                  </NotesSection>
+                )}
+
+                {main.details.team?.length ? (
+                  <NotesSection label="Team">
+                    <ul className="space-y-1.5">
+                      {main.details.team.map((m, i) => (
+                        <li key={i} className="flex justify-between">
+                          <span className="font-medium text-gray-800">{m.name}</span>
+                          <span className="text-gray-400">{m.role}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </NotesSection>
+                ) : null}
+
+                <NotesSection label="Details">
+                  {main.details.timeline && (
+                    <NoteRow
+                      label="Timeline"
+                      value={
+                        "label" in main.details.timeline
+                          ? main.details.timeline.label
+                          : `${main.details.timeline.start}${main.details.timeline.end ? ` → ${main.details.timeline.end}` : ""}`
+                      }
+                    />
+                  )}
+                  {main.details.location && (
+                    <NoteRow label="Location" value={main.details.location} />
+                  )}
+                </NotesSection>
+
+                {main.details.links && Object.values(main.details.links).some(Boolean) && (
+                  <NotesSection label="Links">
+                    <div className="flex flex-col gap-2">
+                      {main.details.links.behance && (
+                        <ExtLink href={main.details.links.behance} label="Behance" />
+                      )}
+                      {main.details.links.caseStudy && (
+                        <ExtLink href={main.details.links.caseStudy} label="Case Study" />
+                      )}
+                      {main.details.links.liveSite && (
+                        <ExtLink href={main.details.links.liveSite} label="Live Site" />
+                      )}
+                      {main.details.links.repo && (
+                        <ExtLink href={main.details.links.repo} label="Repository" />
+                      )}
+                    </div>
+                  </NotesSection>
+                )}
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </div>
     </main>
   );
 }
 
-/* --------------------------------- Header -------------------------------- */
-function ProjectHeader({
-  title,
-  year,
-  aboutOpen,
-  onToggleAbout,
-}: {
-  title: string;
-  year: string | number;
-  aboutOpen: boolean;
-  onToggleAbout: () => void;
-}) {
+// ── Small atoms ───────────────────────────────────────────────
+
+function NotesSection({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <header className="max-w-6xl mx-auto px-4 pt-20 pb-8 flex items-center justify-between">
-      <Link href="/work" aria-label="Back to work">
-        <Btn className="px-3 py-1.5 text-sm">
-          <ArrowLeft size={16} /> Back to work
-        </Btn>
-      </Link>
-
-      <h1 className="text-xl md:text-3xl font-semibold tracking-tight">
-        {title} <span className="opacity-60">- {year}</span>
-      </h1>
-
-      <Btn
-        onClick={onToggleAbout}
-        className="px-3 py-1.5 text-sm"
-        aria-expanded={aboutOpen}
-        aria-controls="project-notes"
-      >
-        Project Notes
-      </Btn>
-    </header>
-  );
-}
-
-/* ------------------------------- Media Flow ------------------------------- */
-
-type MediaItemWithDims = MediaItem & {
-  dimensions?: { w: number; h: number };
-  span2?: boolean; // for square “feature” rows
-};
-
-type FlowNode =
-  | { kind: "image"; item: MediaItemWithDims; i: number }
-  | { kind: "text"; text: string };
-
-function MediaFlow({
-  title,
-  brief,
-  gallery,
-  quoteA,
-  quoteB,
-  hasGallery,
-}: {
-  title: string;
-  brief: string;
-  gallery: MediaItemWithDims[];
-  quoteA: string;
-  quoteB: string;
-  hasGallery: boolean;
-}) {
-  const verticalFlow: FlowNode[] = useMemo(() => {
-    const flow: FlowNode[] = [];
-    gallery.forEach((item, i) => {
-      if (i === 0) flow.push({ kind: "text", text: brief });
-      if (i === 1) flow.push({ kind: "text", text: quoteA });
-      flow.push({ kind: "image", item, i });
-      if (i === 2) flow.push({ kind: "text", text: quoteB });
-    });
-    return flow;
-  }, [gallery, quoteA, quoteB]);
-
-  if (!hasGallery) {
-    return (
-      <div className="grid gap-8">
-        <div className="h-[80vh] rounded-[2px] overflow-hidden">
-          <Placeholder className="w-full h-full" />
-        </div>
-        <Quote text={quoteA} />
-        <div className="h-[90vh] rounded-[2px] overflow-hidden">
-          <Placeholder className="w-full h-full" />
-        </div>
-      </div>
-    );
-  }
-
-  // 2-column responsive grid; quotes take full width
-  return (
-    <div className="grid grid-cols-2 gap-6">
-      {verticalFlow.map((node, idx) =>
-        node.kind === "text" ? (
-          <div key={`txt-${idx}`} className="col-span-2">
-            <Quote text={node.text} />
-          </div>
-        ) : (
-          <MediaCell
-            key={`img-${node.item.url}-${node.i}`}
-            item={node.item}
-            i={node.i}
-            title={title}
-          />
-        )
-      )}
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">{label}</p>
+      <div className="space-y-3">{children}</div>
     </div>
   );
 }
 
-function Quote({ text }: { text: string }) {
+function NoteLabel({ children }: { children: React.ReactNode }) {
+  return <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">{children}</p>;
+}
+
+function NoteRow({ label, value }: { label: string; value?: string }) {
+  if (!value) return null;
   return (
-    <div className="py-12">
-      <div className="text-2xl md:text-4xl font-semibold leading-[1] tracking-tight">
-        {text}
-      </div>
+    <div>
+      <NoteLabel>{label}</NoteLabel>
+      <p className="text-gray-700">{value}</p>
     </div>
   );
 }
 
-/* --------------------------- Aspect + Media Cell -------------------------- */
-
-function getAspectMeta(item: MediaItemWithDims) {
-  // Prefer explicit dimensions if present
-  const w = item.dimensions?.w;
-  const h = item.dimensions?.h;
-
-  if (w && h) {
-    if (w === h) return { kind: "square" as const, span2: !!item.span2 };
-    const ratio = w / h;
-    // treat near-2:1 as wide (covers 1400x700)
-    if (ratio >= 1.8) return { kind: "wide" as const, span2: false };
-    // if almost square, treat as square
-    if (Math.abs(ratio - 1) < 0.1) return { kind: "square" as const, span2: !!item.span2 };
-  }
-
-  // If no dimensions: assume wide for videos; square pairs for images
-  if (item.type === "video") return { kind: "wide" as const, span2: false };
-  return { kind: "square" as const, span2: !!item.span2 };
-}
-
-function MediaCell({
-  item,
-  i,
-  title,
-}: {
-  item: MediaItemWithDims;
-  i: number;
-  title: string;
-}) {
-  const meta = getAspectMeta(item);
-  const isSquare = meta.kind === "square";
-  const isWide = meta.kind === "wide";
-  const span2 = isSquare && meta.span2;
-
-  const colClass = span2 || isWide ? "col-span-2" : "col-span-1";
-  const aspectClass = isSquare ? "aspect-square" : "aspect-[2/1]";
-
-  const variants = {
-    hidden: { opacity: 0, y: 12 },
-    show: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.35, ease: [0.22, 1, 0.36, 1] },
-    },
-  } as const;
-
-  if (item.type === "image") {
-    return (
-      <motion.figure
-        variants={variants}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.2 }}
-        className={`${colClass} ${aspectClass} relative rounded-[2px] overflow-hidden border border-black/5 bg-white`}
-      >
-        <Image
-          src={item.url}
-          alt={item.alt ?? title}
-          fill
-          quality={90}
-          sizes="(min-width: 1280px) 50vw, (min-width: 768px) 50vw, 100vw"
-          className="w-full h-full object-cover object-center"
-          priority={i <= 1}
-          loading={i <= 1 ? "eager" : "lazy"}
-        />
-        <figcaption className="sr-only">{item.alt ?? title}</figcaption>
-      </motion.figure>
-    );
-  }
-
-  // Videos follow the same aspect & spanning rules
+function NoteList({ label, items }: { label: string; items: string[] }) {
   return (
-    <motion.div
-      variants={variants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount: 0.2 }}
-      className={`${colClass} ${aspectClass} relative rounded-[2px] overflow-hidden border border-black/5 bg-black`}
-    >
-      <video
-        src={item.url}
-        className="absolute inset-0 w-full h-full object-cover"
-        controls
-        playsInline
-        preload="metadata"
-      />
-    </motion.div>
-  );
-}
-
-/* ------------------------------- Notes Drawer ------------------------------ */
-function NotesDrawer({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <motion.aside
-      id="project-notes"
-      initial={{ width: 0, opacity: 0 }}
-      animate={{ width: "45%", opacity: 1 }}
-      exit={{ width: 0, opacity: 0 }}
-      transition={{ type: "tween", duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="border-l-2 border-black bg-white overflow-y-auto sticky top-[var(--nav-h,64px)] h-[calc(100vh-var(--nav-h,64px))]"
-      aria-label="Project notes and details"
-    >
-      <div className="px-5 py-4 sticky top-0 bg-white border-b-2 border-black flex items-center justify-between z-10">
-        <div className="font-medium">Project Notes</div>
-        <button
-          className="rounded-full border-2 p-1 hover:bg-black hover:text-white"
-          onClick={onClose}
-          aria-label="Close notes"
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      <div className="px-5 py-5 text-sm grid gap-5">{children}</div>
-    </motion.aside>
-  );
-}
-
-/* --------------------------------- Notes ---------------------------------- */
-function NotesTabs({ project }: { project: Project }) {
-  const { main, extra } = project;
-  const d = main.details;
-
-  const hasLinks = !!(
-    d.links &&
-    (d.links.behance || d.links.caseStudy || d.links.liveSite || d.links.repo)
-  );
-
-  return (
-    <div className="w-full space-y-8" role="region" aria-label="Project notes, vertical layout">
-      {/* Overview */}
-      <section>
-        <SectionLabel>Overview</SectionLabel>
-        <div className="mt-3 space-y-3">
-          <DetailRow label="Client" value={d.client} />
-          <DetailRow label="Sector" value={d.sector} />
-          <DetailRow label="Discipline" value={d.discipline.join(" / ")} />
-          {d.tagline ? <DetailRow label="Tagline" value={d.tagline} /> : null}
-          {d.summary ? (
-            <div>
-              <SectionLabel>Summary</SectionLabel>
-              <p>{d.summary}</p>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      {/* Scope */}
-      <section>
-        <SectionLabel>Scope</SectionLabel>
-        <div className="mt-3 space-y-3">
-          {d.services?.length ? <ListRow label="Services" items={d.services} /> : null}
-          {d.deliverables?.length ? <ListRow label="Deliverables" items={d.deliverables} /> : null}
-          {d.team?.length ? (
-            <div>
-              <SectionLabel>Team</SectionLabel>
-              <ul className="list-disc pl-5 space-y-1">
-                {d.team.map((m) => (
-                  <li key={`${m.name}-${m.role}`}>
-                    {m.name} — {m.role}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      {/* Meta */}
-      <section>
-        <SectionLabel>Meta</SectionLabel>
-        <div className="mt-3 space-y-3">
-          {d.timeline ? (
-            "label" in d.timeline ? (
-              <DetailRow label="Timeline" value={d.timeline.label} />
-            ) : (
-              <DetailRow
-                label="Timeline"
-                value={`${d.timeline.start}${d.timeline.end ? ` → ${d.timeline.end}` : ""}`}
-              />
-            )
-          ) : null}
-          {d.location ? <DetailRow label="Location" value={d.location} /> : null}
-          {hasLinks ? (
-            <div>
-              <SectionLabel>Links</SectionLabel>
-              <div className="flex flex-col gap-1">
-                {d.links?.behance ? <ExtLink href={d.links.behance} label="Behance" /> : null}
-                {d.links?.caseStudy ? <ExtLink href={d.links.caseStudy} label="Case Study" /> : null}
-                {d.links?.liveSite ? <ExtLink href={d.links.liveSite} label="Live Site" /> : null}
-                {d.links?.repo ? <ExtLink href={d.links.repo} label="Repo" /> : null}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      {/* Story */}
-      <section>
-        <SectionLabel>Story</SectionLabel>
-        <div className="mt-3">
-          {extra?.blocks?.length ? (
-            <BlocksRenderer blocks={extra.blocks} />
-          ) : (
-            <div className="opacity-60">No story provided.</div>
-          )}
-        </div>
-      </section>
-    </div>
-  );
-}
-
-/* ----------------------------- Reusable atoms ----------------------------- */
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <div className="uppercase tracking-wider text-[10px] opacity-70 mb-1">{children}</div>;
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="mb-3">
-      <SectionLabel>{label}</SectionLabel>
-      <div>{value}</div>
-    </div>
-  );
-}
-
-function ListRow({ label, items }: { label: string; items: string[] }) {
-  return (
-    <div className="mb-3">
-      <SectionLabel>{label}</SectionLabel>
-      <ul className="list-disc pl-5 space-y-1">
-        {items.map((s) => (
-          <li key={s}>{s}</li>
+    <div>
+      <NoteLabel>{label}</NoteLabel>
+      <ul className="space-y-0.5">
+        {items.map((s, i) => (
+          <li key={i} className="text-gray-700 flex items-start gap-1.5">
+            <span className="text-gray-300 mt-1">—</span> {s}
+          </li>
         ))}
       </ul>
     </div>
@@ -460,23 +253,18 @@ function ExtLink({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noreferrer"
-      className="inline-flex items-center gap-1 underline hover:opacity-80"
+      className="flex items-center gap-1.5 text-gray-700 hover:text-black underline underline-offset-2 transition-colors"
     >
-      {label} <ExternalLink size={14} />
+      {label} <ExternalLink size={12} />
     </a>
   );
 }
 
-/* ----------------------------- Accessibility ------------------------------ */
-/** Attaches a global Escape key handler when `active` is true. */
 function useEscapeClose(active: boolean, onClose: () => void) {
   const handler = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
+    (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); },
     [onClose]
   );
-
   useEffect(() => {
     if (!active) return;
     window.addEventListener("keydown", handler);
