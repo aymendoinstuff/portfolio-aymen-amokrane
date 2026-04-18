@@ -4,12 +4,10 @@ import type { Project } from "@/lib/types/project";
 
 export async function repoGetPublishedProjects(max = 24): Promise<Project[]> {
   try {
-    const snap = await adminDb
-      .collection("projects")
-      .where("general.published", "==", true)
-      .get();
+    const snap = await adminDb.collection("projects").get();
     return snap.docs
       .map((d) => d.data() as Project)
+      .filter((p) => p?.general?.published === true)
       .sort((a, b) => (b.general.updatedAt ?? 0) - (a.general.updatedAt ?? 0))
       .slice(0, max);
   } catch (err) {
