@@ -7,10 +7,11 @@ export async function repoGetPublishedProjects(max = 24): Promise<Project[]> {
     const snap = await adminDb
       .collection("projects")
       .where("general.published", "==", true)
-      .orderBy("general.updatedAt", "desc")
-      .limit(max)
       .get();
-    return snap.docs.map((d) => d.data() as Project);
+    return snap.docs
+      .map((d) => d.data() as Project)
+      .sort((a, b) => (b.general.updatedAt ?? 0) - (a.general.updatedAt ?? 0))
+      .slice(0, max);
   } catch (err) {
     console.error("[repoGetPublishedProjects] error:", err);
     return [];
