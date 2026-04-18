@@ -39,11 +39,8 @@ PXLqx/cOosBN9p9YEnoWc12u
 
 const db = getFirestore(app);
 
-// Colored placeholder: placehold.co/WxH/bg/text
-const col = (w, h, hex, label = "+") =>
-  `https://placehold.co/${w}x${h}/${hex.replace("#", "")}/ffffff?text=${encodeURIComponent(label)}`;
-
-// Real photo: picsum
+// All images use picsum with unique seeds so every slot is a different photo
+const col = (w, h, _hex, seed) => `https://picsum.photos/seed/${seed}/${w}/${h}`;
 const pic = (w, h, seed) => `https://picsum.photos/seed/${seed}/${w}/${h}`;
 
 const now = Date.now();
