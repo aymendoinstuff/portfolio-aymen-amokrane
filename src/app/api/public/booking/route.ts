@@ -67,8 +67,8 @@ export async function POST(req: Request) {
       readAt: null,
     });
 
-    // Fire-and-forget email — never blocks the response
-    sendBookingNotification(data as Record<string, unknown>);
+    // Await email so Vercel doesn't kill the function before it sends
+    await sendBookingNotification(data as Record<string, unknown>);
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (err) {
