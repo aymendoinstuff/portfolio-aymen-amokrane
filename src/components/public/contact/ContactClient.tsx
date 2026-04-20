@@ -398,101 +398,75 @@ function ServiceCard({
   );
 }
 
-// ─── General Inquiry — full-width card ───────────────────────────────────────
+// ─── General Inquiry — static contact info card ──────────────────────────────
 
 function InquirySection({ title }: { title: string }) {
-  const [fields, setFields] = useState({ name: "", email: "", subject: "", message: "" });
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-
-  function set(k: string, v: string) {
-    setFields((prev) => ({ ...prev, [k]: v }));
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setStatus("sending");
-    try {
-      const res = await fetch("/api/public/booking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "inquiry", ...fields }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      setStatus("sent");
-    } catch {
-      setStatus("error");
-    }
-  }
-
-  const inputCls =
-    "w-full border border-gray-200 rounded-xl px-4 h-11 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition placeholder:text-gray-300 bg-white";
-  const textareaCls =
-    "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition placeholder:text-gray-300 resize-none bg-white";
-
   return (
     <section className="max-w-6xl mx-auto px-4 md:px-6 py-10 md:py-14 border-t border-gray-100">
       {/* Full-width card */}
       <div className="bg-gray-50 border border-gray-200 rounded-3xl p-8 md:p-12">
-        <div className="grid md:grid-cols-[1fr_2fr] gap-10 md:gap-16 items-start">
+        <div className="grid md:grid-cols-[1fr_1fr] gap-10 md:gap-16 items-center">
 
           {/* Left — title + description */}
-          <div className="md:sticky md:top-24">
+          <div>
             <h2 className="text-4xl md:text-5xl tracking-tight leading-[0.95] mb-4">{title}</h2>
-            <p className="text-gray-500 text-sm leading-relaxed">
+            <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
               Not sure which service fits? Have a question or an idea?
-              Just send a message — no pitch, no pressure.
+              Reach out directly — no pitch, no pressure.
             </p>
             <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400">
               Usually replies within 24h
             </p>
           </div>
 
-          {/* Right — form */}
-          <div>
-            {status === "sent" ? (
-              <div className="flex flex-col gap-4 py-6">
-                <div className="w-11 h-11 rounded-full bg-black flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-5 h-5">
-                    <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-                <p className="text-2xl font-black tracking-tight">Message received.</p>
-                <p className="text-gray-500 text-sm">I&apos;ll get back to you as soon as I can.</p>
-                <button
-                  onClick={() => { setStatus("idle"); setFields({ name: "", email: "", subject: "", message: "" }); }}
-                  className="mt-1 text-sm text-gray-400 hover:text-black underline underline-offset-4 transition w-fit"
-                >
-                  Send another
-                </button>
+          {/* Right — contact details */}
+          <div className="flex flex-col gap-5">
+            {/* Email */}
+            <a
+              href="mailto:hello@stuffbyaymen.com"
+              className="group flex items-center gap-4 p-5 bg-white border border-gray-200 rounded-2xl hover:border-gray-900 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4">
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                </svg>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-[0.12em] mb-1.5">Name *</label>
-                    <input className={inputCls} placeholder="Your name" value={fields.name} onChange={(e) => set("name", e.target.value)} required />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-[0.12em] mb-1.5">Email *</label>
-                    <input type="email" className={inputCls} placeholder="you@email.com" value={fields.email} onChange={(e) => set("email", e.target.value)} required />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-[0.12em] mb-1.5">Subject</label>
-                  <input className={inputCls} placeholder="What's on your mind?" value={fields.subject} onChange={(e) => set("subject", e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-[0.12em] mb-1.5">Message *</label>
-                  <textarea className={textareaCls} rows={5} placeholder="Tell me anything..." value={fields.message} onChange={(e) => set("message", e.target.value)} required />
-                </div>
-                {status === "error" && (
-                  <p className="text-sm text-red-500">Something went wrong. Please try again.</p>
-                )}
-                <button type="submit" disabled={status === "sending"} className={BTN_PRIMARY}>
-                  {status === "sending" ? "Sending…" : "Send Message"}
-                </button>
-              </form>
-            )}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-400 mb-0.5">Email</p>
+                <p className="text-sm font-semibold text-gray-900 group-hover:underline underline-offset-2">hello@stuffbyaymen.com</p>
+              </div>
+            </a>
+
+            {/* Phone */}
+            <a
+              href="tel:+971589244667"
+              className="group flex items-center gap-4 p-5 bg-white border border-gray-200 rounded-2xl hover:border-gray-900 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 5.99 5.99l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-400 mb-0.5">Phone / WhatsApp</p>
+                <p className="text-sm font-semibold text-gray-900 group-hover:underline underline-offset-2">+971 58 924 4667</p>
+              </div>
+            </a>
+
+            {/* Location */}
+            <div className="flex items-center gap-4 p-5 bg-white border border-gray-200 rounded-2xl">
+              <div className="w-10 h-10 rounded-full bg-black flex items-center justify-center shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4">
+                  <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-gray-400 mb-0.5">Location</p>
+                <p className="text-sm font-semibold text-gray-900">Dubai, UAE</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
