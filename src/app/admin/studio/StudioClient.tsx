@@ -5,11 +5,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, Plus, X, Check, Clock,
   Calendar, Mail, Phone, Briefcase, Ban, AlertCircle, Trash2,
+  Tag, Flame, Star, CheckCircle2, Archive,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type EventType = "call" | "project" | "blocked" | "pending";
+type LabelKey  = "urgent" | "hot-lead" | "follow-up" | "done";
 
 interface CalEvent {
   id: string;
@@ -31,6 +33,7 @@ interface Booking {
   name?: string;
   email?: string;
   status?: string;
+  labels?: LabelKey[];
   createdAt?: number;
   message?: string;
   subject?: string;
@@ -41,6 +44,29 @@ interface Booking {
   budgetRange?: string;
   timeline?: string;
   location?: string;
+}
+
+// ─── Label config ─────────────────────────────────────────────────────────────
+
+const LABELS: Record<LabelKey, { label: string; color: string; bg: string; icon: React.ElementType }> = {
+  "urgent":    { label: "Urgent",     color: "text-red-600",    bg: "bg-red-50 border-red-200",    icon: Flame },
+  "hot-lead":  { label: "Hot Lead",   color: "text-orange-600", bg: "bg-orange-50 border-orange-200", icon: Star },
+  "follow-up": { label: "Follow-up",  color: "text-blue-600",   bg: "bg-blue-50 border-blue-200",  icon: Clock },
+  "done":      { label: "Done",       color: "text-green-600",  bg: "bg-green-50 border-green-200",icon: CheckCircle2 },
+};
+
+// Auto-label by booking type
+function autoLabel(b: Booking): string {
+  const map: Record<string, string> = {
+    wishlist:       "Wishlist",
+    branding:       "Branding",
+    "11-meet":      "1/1 Meet",
+    "brand-audit":  "Brand Audit",
+    "team-training":"Training",
+    service:        "Service",
+    inquiry:        "Inquiry",
+  };
+  return b.serviceTitle ?? b.projectTitle ?? (b.type ? (map[b.type] ?? b.type) : "Inquiry");
 }
 
 // ─── Event styles ─────────────────────────────────────────────────────────────
@@ -58,7 +84,6 @@ function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 function getFirstWeekday(year: number, month: number) {
-  // Monday-first (0=Mon … 6=Sun)
   return (new Date(year, month, 1).getDay() + 6) % 7;
 }
 function toDateStr(year: number, month: number, day: number) {
@@ -97,6 +122,11 @@ function EventModal({
   const [notes, setNotes]       = useState(existingEvent?.notes ?? "");
   const [saving, setSaving]     = useState(false);
 
+  // Warn if call not on Sunday 11am–5pm (Dubai time = UTC+4)
+  const selectedDay = new Date(eventDate + "T12:00:00").getDay(); // 0=Sun
+  const isCallWarning = type === "call" && selectedDay !== 0;
+  const isTimeWarning = type === "call" && startTime && (startTime < "11:00" || startTime > "17:00");
+
   const inputCls = "w-full border border-gray-200 rounded-xl px-3 h-10 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition bg-white";
   const labelCls = "block text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1";
 
@@ -104,9 +134,7 @@ function EventModal({
     if (!title.trim()) return;
     setSaving(true);
     await onSave({
-      title: title.trim(),
-      type,
-      date: eventDate,
+      title: title.trim(), type, date: eventDate,
       ...(endDate ? { endDate } : {}),
       ...(startTime ? { startTime } : {}),
       ...(endTime ? { endTime } : {}),
@@ -129,7 +157,6 @@ function EventModal({
         transition={{ type: "spring", damping: 30, stiffness: 400 }}
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md z-10 overflow-hidden"
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h3 className="text-sm font-bold text-gray-900">
             {existingEvent ? "Edit Event" : "New Event"}
@@ -158,15 +185,9 @@ function EventModal({
                 const s = EVENT_STYLES[t];
                 const Icon = s.icon;
                 return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setType(t)}
-                    className={[
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition",
-                      type === t
-                        ? `${s.bg} ${s.text} border-current`
-                        : "border-gray-200 text-gray-500 hover:border-gray-300",
+                  <button key={t} type="button" onClick={() => setType(t)}
+                    className={["flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition",
+                      type === t ? `${s.bg} ${s.text} border-current` : "border-gray-200 text-gray-500 hover:border-gray-300",
                     ].join(" ")}
                   >
                     <Icon size={11} />
@@ -176,6 +197,20 @@ function EventModal({
               })}
             </div>
           </div>
+
+          {/* Call slot warnings */}
+          {isCallWarning && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+              <AlertCircle size={14} className="text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-700">Calls are typically on <strong>Sundays</strong> — this is a {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][selectedDay]}.</p>
+            </div>
+          )}
+          {isTimeWarning && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+              <Clock size={14} className="text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-700">Call slot is <strong>11:00–17:00 Dubai time</strong>.</p>
+            </div>
+          )}
 
           {/* Title */}
           <div>
@@ -226,22 +261,14 @@ function EventModal({
             <label className={labelCls}>Notes</label>
             <textarea
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition resize-none bg-white"
-              rows={3}
-              placeholder="Optional notes..."
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
+              rows={3} placeholder="Optional notes..." value={notes} onChange={e => setNotes(e.target.value)}
             />
           </div>
         </div>
 
-        {/* Footer */}
         <div className="px-5 py-4 border-t border-gray-100 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-black transition">
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!title.trim() || saving}
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-500 hover:text-black transition">Cancel</button>
+          <button onClick={handleSave} disabled={!title.trim() || saving}
             className="px-5 py-2 bg-black text-white text-sm font-semibold rounded-xl hover:bg-gray-900 transition disabled:opacity-50"
           >
             {saving ? "Saving…" : existingEvent ? "Update" : "Create Event"}
@@ -259,31 +286,44 @@ function BookingPanel({
   onSchedule,
   onDecline,
   onMarkRead,
+  onLabel,
 }: {
   bookings: Booking[];
   onSchedule: (b: Booking) => void;
   onDecline: (id: string) => void;
   onMarkRead: (id: string) => void;
+  onLabel: (id: string, labels: LabelKey[]) => void;
 }) {
   const [selected, setSelected] = useState<Booking | null>(null);
+  const [filterLabel, setFilterLabel] = useState<LabelKey | "all">("all");
 
   const newCount = bookings.filter(b => b.status === "new").length;
+
+  const filteredBookings = filterLabel === "all"
+    ? bookings
+    : bookings.filter(b => b.labels?.includes(filterLabel));
 
   const statusBadge = (status?: string) => {
     if (status === "confirmed") return "bg-green-100 text-green-700";
     if (status === "declined")  return "bg-red-100 text-red-500";
     if (status === "read")      return "bg-gray-100 text-gray-500";
-    return "bg-yellow-100 text-yellow-700"; // new
+    return "bg-yellow-100 text-yellow-700";
   };
 
-  const typeLabel = (b: Booking) =>
-    b.serviceTitle ?? b.projectTitle ?? b.type ?? "Inquiry";
+  function toggleLabel(bookingId: string, current: LabelKey[] | undefined, key: LabelKey) {
+    const cur = current ?? [];
+    const next = cur.includes(key) ? cur.filter(l => l !== key) : [...cur, key];
+    onLabel(bookingId, next);
+    if (selected?.id === bookingId) {
+      setSelected(prev => prev ? { ...prev, labels: next } : null);
+    }
+  }
 
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="px-4 py-3 border-b border-gray-100 shrink-0">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
             <Mail size={14} className="text-gray-400" />
             Bookings
@@ -294,9 +334,26 @@ function BookingPanel({
             </span>
           )}
         </div>
+        {/* Label filter pills */}
+        <div className="flex gap-1 overflow-x-auto pb-0.5">
+          <button onClick={() => setFilterLabel("all")}
+            className={`shrink-0 text-[10px] px-2 py-1 rounded-full font-semibold transition border ${filterLabel === "all" ? "bg-black text-white border-black" : "border-gray-200 text-gray-500 hover:border-gray-400"}`}
+          >All</button>
+          {(Object.keys(LABELS) as LabelKey[]).map(k => {
+            const L = LABELS[k];
+            const Icon = L.icon;
+            return (
+              <button key={k} onClick={() => setFilterLabel(filterLabel === k ? "all" : k)}
+                className={`shrink-0 flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-semibold transition border ${filterLabel === k ? `${L.bg} ${L.color} border-current` : "border-gray-200 text-gray-500 hover:border-gray-400"}`}
+              >
+                <Icon size={9} />{L.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Detail view */}
+      {/* Detail slide-in */}
       <AnimatePresence>
         {selected && (
           <motion.div
@@ -306,7 +363,6 @@ function BookingPanel({
             transition={{ type: "spring", damping: 30, stiffness: 350 }}
             className="absolute inset-0 z-20 bg-white flex flex-col"
           >
-            {/* Detail header */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 shrink-0">
               <button onClick={() => setSelected(null)} className="p-1 rounded-lg hover:bg-gray-100 transition">
                 <ChevronLeft size={14} />
@@ -317,17 +373,38 @@ function BookingPanel({
               </span>
             </div>
 
-            {/* Detail body */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              {/* Auto-type badge */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-full text-[10px] font-semibold text-gray-600">
+                <Tag size={9} />
+                {autoLabel(selected)}
+              </div>
+
+              {/* Labels */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Labels</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(Object.keys(LABELS) as LabelKey[]).map(k => {
+                    const L = LABELS[k];
+                    const Icon = L.icon;
+                    const active = selected.labels?.includes(k);
+                    return (
+                      <button key={k} type="button"
+                        onClick={() => toggleLabel(selected.id, selected.labels, k)}
+                        className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full font-semibold border transition ${active ? `${L.bg} ${L.color} border-current` : "border-gray-200 text-gray-400 hover:border-gray-400"}`}
+                      >
+                        <Icon size={9} />{L.label}
+                        {active && <Check size={8} className="ml-0.5" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">From</p>
                 <p className="text-sm font-semibold">{selected.name}</p>
                 <a href={`mailto:${selected.email}`} className="text-xs text-blue-600 underline">{selected.email}</a>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Type</p>
-                <p className="text-sm">{typeLabel(selected)}</p>
               </div>
 
               {selected.subject && (
@@ -372,7 +449,6 @@ function BookingPanel({
               )}
             </div>
 
-            {/* Detail actions */}
             {selected.status !== "confirmed" && selected.status !== "declined" && (
               <div className="px-4 py-4 border-t border-gray-100 space-y-2 shrink-0">
                 <button
@@ -396,20 +472,17 @@ function BookingPanel({
 
       {/* List */}
       <div className="flex-1 overflow-y-auto">
-        {bookings.length === 0 ? (
+        {filteredBookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-gray-300">
-            <Mail size={24} className="mb-2" />
-            <p className="text-xs">No bookings yet</p>
+            <Archive size={24} className="mb-2" />
+            <p className="text-xs">{filterLabel === "all" ? "No bookings yet" : `No ${LABELS[filterLabel as LabelKey]?.label} bookings`}</p>
           </div>
         ) : (
-          bookings.map((b) => (
+          filteredBookings.map((b) => (
             <button
               key={b.id}
               type="button"
-              onClick={() => {
-                setSelected(b);
-                if (b.status === "new") onMarkRead(b.id);
-              }}
+              onClick={() => { setSelected(b); if (b.status === "new") onMarkRead(b.id); }}
               className="w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition"
             >
               <div className="flex items-start justify-between gap-2">
@@ -417,12 +490,25 @@ function BookingPanel({
                   <p className={`text-sm truncate ${b.status === "new" ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}>
                     {b.name ?? "Unknown"}
                   </p>
-                  <p className="text-xs text-gray-400 truncate">{typeLabel(b)}</p>
+                  <p className="text-xs text-gray-400 truncate">{autoLabel(b)}</p>
+                  {/* Label chips */}
+                  {b.labels && b.labels.length > 0 && (
+                    <div className="flex gap-1 mt-1 flex-wrap">
+                      {b.labels.map(k => {
+                        const L = LABELS[k];
+                        if (!L) return null;
+                        const Icon = L.icon;
+                        return (
+                          <span key={k} className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-semibold border ${L.bg} ${L.color}`}>
+                            <Icon size={8} />{L.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-col items-end gap-1 shrink-0">
-                  {b.status === "new" && (
-                    <span className="w-2 h-2 bg-black rounded-full" />
-                  )}
+                  {b.status === "new" && <span className="w-2 h-2 bg-black rounded-full" />}
                   <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${statusBadge(b.status)}`}>
                     {b.status ?? "new"}
                   </span>
@@ -445,10 +531,12 @@ function BookingPanel({
 
 function CalendarView({
   events,
+  activeProjects,
   onDayClick,
   onEventClick,
 }: {
   events: CalEvent[];
+  activeProjects: number;
   onDayClick: (date: string) => void;
   onEventClick: (event: CalEvent) => void;
 }) {
@@ -460,12 +548,10 @@ function CalendarView({
   const daysInMonth = getDaysInMonth(year, month);
   const firstWeekday = getFirstWeekday(year, month);
 
-  // Build grid: blanks + days
   const cells: (number | null)[] = [
     ...Array(firstWeekday).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
   ];
-  // Pad to full weeks
   while (cells.length % 7 !== 0) cells.push(null);
 
   function prevMonth() {
@@ -502,10 +588,15 @@ function CalendarView({
           </button>
         </div>
 
-        {/* Legend */}
         <div className="flex items-center gap-3">
+          {/* Project capacity badge */}
+          <div className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full ${activeProjects >= 2 ? "bg-red-50 text-red-600" : activeProjects === 1 ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"}`}>
+            <Briefcase size={10} />
+            {activeProjects}/2 projects
+          </div>
+          {/* Legend */}
           {(Object.keys(EVENT_STYLES) as EventType[]).map(t => (
-            <span key={t} className="flex items-center gap-1 text-[10px] text-gray-500">
+            <span key={t} className="hidden lg:flex items-center gap-1 text-[10px] text-gray-500">
               <span className={`w-2 h-2 rounded-full ${EVENT_STYLES[t].dot}`} />
               {EVENT_STYLES[t].label}
             </span>
@@ -532,6 +623,8 @@ function CalendarView({
             const dayEvents = eventsForDay(day);
             const isToday = ds === today;
             const isPast = ds < today;
+            // Sundays = 0
+            const isSunday = new Date(ds + "T12:00:00").getDay() === 0;
 
             return (
               <div
@@ -539,18 +632,19 @@ function CalendarView({
                 onClick={() => onDayClick(ds)}
                 className={[
                   "border-r border-b border-gray-100 min-h-[90px] p-1.5 cursor-pointer transition-colors",
-                  isToday ? "bg-gray-950/[0.03]" : isPast ? "bg-gray-50/50" : "hover:bg-gray-50",
+                  isToday ? "bg-gray-950/[0.03]" : isPast ? "bg-gray-50/50" : isSunday ? "bg-blue-50/30" : "hover:bg-gray-50",
                 ].join(" ")}
               >
-                {/* Day number */}
-                <div className={[
-                  "w-6 h-6 flex items-center justify-center text-xs font-semibold rounded-full mb-1",
-                  isToday ? "bg-black text-white" : isPast ? "text-gray-300" : "text-gray-700",
-                ].join(" ")}>
-                  {day}
+                <div className="flex items-center justify-between mb-1">
+                  <div className={[
+                    "w-6 h-6 flex items-center justify-center text-xs font-semibold rounded-full",
+                    isToday ? "bg-black text-white" : isPast ? "text-gray-300" : isSunday ? "text-blue-700 font-black" : "text-gray-700",
+                  ].join(" ")}>
+                    {day}
+                  </div>
+                  {isSunday && !isPast && <span className="text-[8px] font-bold text-blue-400 tracking-wide">CALLS</span>}
                 </div>
 
-                {/* Events */}
                 <div className="space-y-0.5">
                   {dayEvents.slice(0, 3).map(e => {
                     const s = EVENT_STYLES[e.type];
@@ -559,10 +653,7 @@ function CalendarView({
                         key={e.id}
                         type="button"
                         onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
-                        className={[
-                          "w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate",
-                          s.bg, s.text,
-                        ].join(" ")}
+                        className={["w-full text-left px-1.5 py-0.5 rounded text-[10px] font-semibold truncate", s.bg, s.text].join(" ")}
                       >
                         {e.startTime && <span className="opacity-60 mr-1">{e.startTime}</span>}
                         {e.title}
@@ -579,7 +670,7 @@ function CalendarView({
         </div>
       </div>
 
-      {/* Upcoming sidebar strip */}
+      {/* Upcoming strip */}
       <div className="border-t border-gray-100 px-4 py-3 shrink-0">
         <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-2">Upcoming</p>
         <div className="flex gap-2 overflow-x-auto pb-1">
@@ -589,10 +680,7 @@ function CalendarView({
             .map(e => {
               const s = EVENT_STYLES[e.type];
               return (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => onEventClick(e)}
+                <button key={e.id} type="button" onClick={() => onEventClick(e)}
                   className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold ${s.bg} ${s.text} hover:opacity-80 transition`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
@@ -621,13 +709,19 @@ export default function StudioClient({
 }) {
   const [bookings, setBookings] = useState<Booking[]>(initialBookings);
   const [events,   setEvents]   = useState<CalEvent[]>(initialEvents);
+  const [tab, setTab] = useState<"bookings" | "calendar">("bookings");
 
-  // Modal state
   const [modal, setModal] = useState<{
     date: string;
     booking?: Booking | null;
     existing?: CalEvent | null;
   } | null>(null);
+
+  // Count active projects (confirmed or scheduled project events in the future or ongoing)
+  const today = todayStr();
+  const activeProjects = events.filter(
+    e => e.type === "project" && (e.endDate ?? e.date) >= today
+  ).length;
 
   // ── API helpers ──
   const createEvent = useCallback(async (data: Omit<CalEvent, "id">) => {
@@ -640,8 +734,6 @@ export default function StudioClient({
     const json = await res.json() as { id: string };
     const newEvent: CalEvent = { id: json.id, ...data };
     setEvents(prev => [...prev, newEvent].sort((a, b) => a.date.localeCompare(b.date)));
-
-    // If linked booking, mark confirmed
     if (data.bookingId) {
       setBookings(prev => prev.map(b => b.id === data.bookingId ? { ...b, status: "confirmed" } : b));
     }
@@ -670,56 +762,111 @@ export default function StudioClient({
     setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
   }, []);
 
-  // ── Handlers ──
-  function handleDayClick(date: string) {
-    setModal({ date, booking: null, existing: null });
-  }
+  const labelBooking = useCallback(async (id: string, labels: LabelKey[]) => {
+    // Optimistic update
+    setBookings(prev => prev.map(b => b.id === id ? { ...b, labels } : b));
+    // Persist — the PATCH endpoint accepts any extra fields
+    await fetch(`/api/admin/bookings/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: bookings.find(b => b.id === id)?.status ?? "read", labels }),
+    });
+  }, [bookings]);
 
-  function handleEventClick(event: CalEvent) {
-    setModal({ date: event.date, existing: event });
-  }
-
-  function handleSchedule(booking: Booking) {
-    setModal({ date: new Date().toISOString().slice(0, 10), booking });
-  }
+  const newCount = bookings.filter(b => b.status === "new").length;
 
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
-      {/* Sticky header */}
+      {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 shrink-0 flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">Studio</h1>
           <p className="text-xs text-gray-400 mt-0.5">Calendar · Bookings · Schedule</p>
         </div>
-        <button
-          onClick={() => setModal({ date: new Date().toISOString().slice(0, 10) })}
-          className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-800 transition"
-        >
-          <Plus size={14} />
-          New Event
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Capacity warning */}
+          {activeProjects >= 2 && (
+            <span className="text-xs font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200">
+              At capacity — 2 active projects
+            </span>
+          )}
+          <button
+            onClick={() => { setModal({ date: new Date().toISOString().slice(0, 10) }); setTab("calendar"); }}
+            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-800 transition"
+          >
+            <Plus size={14} />
+            New Event
+          </button>
+        </div>
       </div>
 
-      {/* Main 2-column layout */}
-      <div className="flex-1 flex min-h-0">
-        {/* Left — Bookings inbox */}
-        <div className="w-72 shrink-0 border-r border-gray-200 bg-white flex flex-col relative overflow-hidden">
-          <BookingPanel
-            bookings={bookings}
-            onSchedule={handleSchedule}
-            onDecline={(id) => updateBooking(id, "declined")}
-            onMarkRead={(id) => updateBooking(id, "read")}
-          />
+      {/* Tabs */}
+      <div className="bg-white border-b border-gray-200 px-6 shrink-0">
+        <div className="flex gap-1">
+          {(["bookings", "calendar"] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`relative px-4 py-3 text-sm font-semibold capitalize transition-colors ${tab === t ? "text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
+            >
+              {t}
+              {t === "bookings" && newCount > 0 && (
+                <span className="ml-1.5 bg-black text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                  {newCount}
+                </span>
+              )}
+              {tab === t && (
+                <motion.div
+                  layoutId="studio-tab-indicator"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"
+                  transition={{ type: "spring", damping: 30, stiffness: 400 }}
+                />
+              )}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Right — Calendar */}
-        <div className="flex-1 bg-white min-w-0 flex flex-col">
-          <CalendarView
-            events={events}
-            onDayClick={handleDayClick}
-            onEventClick={handleEventClick}
-          />
-        </div>
+      {/* Tab panels */}
+      <div className="flex-1 min-h-0 overflow-hidden bg-white relative">
+        <AnimatePresence mode="wait" initial={false}>
+          {tab === "bookings" ? (
+            <motion.div
+              key="bookings"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="absolute inset-0 flex flex-col overflow-hidden"
+            >
+              <div className="relative flex-1 overflow-hidden">
+                <BookingPanel
+                  bookings={bookings}
+                  onSchedule={(b) => { setModal({ date: new Date().toISOString().slice(0, 10), booking: b }); setTab("calendar"); }}
+                  onDecline={(id) => updateBooking(id, "declined")}
+                  onMarkRead={(id) => updateBooking(id, "read")}
+                  onLabel={labelBooking}
+                />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="calendar"
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 16 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="absolute inset-0"
+            >
+              <CalendarView
+                events={events}
+                activeProjects={activeProjects}
+                onDayClick={(date) => setModal({ date, booking: null, existing: null })}
+                onEventClick={(event) => setModal({ date: event.date, existing: event })}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Event modal */}

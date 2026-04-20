@@ -21,7 +21,8 @@ export default async function SiteLayout({
         logoUrl={settings.nav.logoUrl}
         links={settings.nav.links}
       />
-      <div style={{ paddingTop: "var(--nav-h, 64px)" }}>{children}</div>
+      {/* paddingTop compensates for fixed navbar; on homepage the navbar hides so we keep a small offset */}
+      <div style={{ paddingTop: "var(--nav-h, 0px)" }}>{children}</div>
       <Footer footer={settings.footer} />
     </>
   );

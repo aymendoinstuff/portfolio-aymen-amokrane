@@ -36,7 +36,7 @@ export default async function AboutPage() {
           {/* Avatar */}
           <div className="mx-auto h-28 w-28 rounded-full border-2 border-white overflow-hidden bg-gray-800 shadow">
             {heroAvatarUrl ? (
-              <img src={heroAvatarUrl} alt={name} className="w-full h-full object-cover" />
+              <img src={heroAvatarUrl} alt={name} fetchPriority="high" decoding="async" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-gray-500 text-4xl font-bold">
                 {name[0]?.toUpperCase() ?? "A"}

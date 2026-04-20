@@ -6,6 +6,7 @@ import { Plus, Minus, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-rea
 import type { SiteSettings } from "@/app/admin/settings/schema";
 import { BookingModal, type BookingType } from "./BookingModal";
 import AvailabilityWidget from "./AvailabilityWidget";
+import ScrollReveal from "@/components/ScrollReveal";
 
 // ─── Shared button classes ────────────────────────────────────────────────────
 // Primary (dark fill, pill)
@@ -517,7 +518,15 @@ export default function ContactClient({
 
   return (
     <>
-      {sortedSections.map((s) => renderSection(s.id))}
+      {sortedSections.map((s, i) => {
+        const el = renderSection(s.id);
+        if (!el) return null;
+        return (
+          <ScrollReveal key={s.id} delay={i * 0.08}>
+            {el}
+          </ScrollReveal>
+        );
+      })}
       <BookingModal booking={booking} onClose={() => setBooking(null)} />
     </>
   );

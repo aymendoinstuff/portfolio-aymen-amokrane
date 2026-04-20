@@ -256,6 +256,14 @@ function TrainingForm({ pricingOptions, fields, onChange }: {
 }) {
   return (
     <div className="space-y-4">
+      {/* Dubai-only notice */}
+      <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+        <span className="text-lg leading-none mt-0.5">🇦🇪</span>
+        <div>
+          <p className="text-xs font-bold text-amber-800">Dubai only</p>
+          <p className="text-xs text-amber-700 mt-0.5">Team Training workshops are currently held exclusively in Dubai, UAE. Remote or hybrid formats may be arranged on a case-by-case basis.</p>
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
           <Label>Your Name *</Label>

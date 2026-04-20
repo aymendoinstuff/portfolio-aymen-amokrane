@@ -2,6 +2,7 @@ import { repoGetPublishedProjects } from "@/lib/repositories/projects";
 import { repoGetPublishedArticles } from "@/lib/repositories/articles";
 import { getServerSiteSettings } from "@/lib/settings/server";
 import EdgeLabel from "@/components/EdgeLabel";
+import ScrollReveal from "@/components/ScrollReveal";
 import PageIntroTransition from "@/components/public/home/PageIntroTransition";
 import HeroSection from "@/components/public/home/HeroSection";
 import FeaturedProjectsSection from "@/components/public/home/FeaturedProjectsSection";
@@ -46,34 +47,36 @@ export default async function HomePage() {
         );
       case "featured_projects":
         return (
-          <FeaturedProjectsSection
-            key="featured_projects"
-            projects={projects}
-            featuredProjectIds={settings.home?.featuredProjectIds ?? []}
-          />
+          <ScrollReveal key="featured_projects" delay={0.05}>
+            <FeaturedProjectsSection
+              projects={projects}
+              featuredProjectIds={settings.home?.featuredProjectIds ?? []}
+            />
+          </ScrollReveal>
         );
       case "clients":
         return (
-          <ClientsSection
-            key="clients"
-            clients={settings.home?.clients ?? []}
-          />
+          <ScrollReveal key="clients" delay={0.05}>
+            <ClientsSection clients={settings.home?.clients ?? []} />
+          </ScrollReveal>
         );
       case "articles":
-        return <ArticlesSection key="articles" articles={articles} />;
+        return (
+          <ScrollReveal key="articles" delay={0.05}>
+            <ArticlesSection articles={articles} />
+          </ScrollReveal>
+        );
       case "testimonials":
         return (
-          <TestimonialsSection
-            key="testimonials"
-            testimonials={settings.home?.testimonials ?? []}
-          />
+          <ScrollReveal key="testimonials" delay={0.05}>
+            <TestimonialsSection testimonials={settings.home?.testimonials ?? []} />
+          </ScrollReveal>
         );
       case "numbers":
         return (
-          <NumbersSection
-            key="numbers"
-            statIndices={settings.home?.numberStatIndices ?? [0, 1, 2, 3]}
-          />
+          <ScrollReveal key="numbers" delay={0.05}>
+            <NumbersSection statIndices={settings.home?.numberStatIndices ?? [0, 1, 2, 3]} />
+          </ScrollReveal>
         );
       default:
         return null;

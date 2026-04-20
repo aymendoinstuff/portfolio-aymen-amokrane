@@ -151,6 +151,9 @@ export default function AvailabilityWidget() {
               const isBusy = busySet.has(ds);
               const isCall = callSet.has(ds);
 
+              // Sunday = 0, calls only on Sundays
+              const isSunday = date.getDay() === 0;
+
               return (
                 <div key={i} className="flex flex-col items-center py-0.5">
                   <div
@@ -162,6 +165,8 @@ export default function AvailabilityWidget() {
                         ? "text-gray-300"
                         : isBusy
                         ? "text-gray-400"
+                        : isSunday
+                        ? "text-blue-700 font-bold"
                         : "text-gray-700",
                     ].join(" ")}
                   >
@@ -176,6 +181,8 @@ export default function AvailabilityWidget() {
                           ? "bg-red-400"
                           : isCall
                           ? "bg-blue-400"
+                          : isSunday
+                          ? "bg-blue-200"
                           : "bg-emerald-400",
                       ].join(" ")}
                     />
@@ -199,6 +206,10 @@ export default function AvailabilityWidget() {
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
           <span className="text-[10px] text-gray-500">Available</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2 h-2 rounded-full bg-blue-200 shrink-0" />
+          <span className="text-[10px] text-gray-500">Sunday — call slots open</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-blue-400 shrink-0" />

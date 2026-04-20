@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, ArrowUpRight } from "lucide-react";
 
@@ -24,17 +25,26 @@ export default function NavBar({
   logoUrl = "",
   links = DEFAULT_LINKS,
 }: NavBarProps) {
-  const [visible, setVisible] = useState(false);
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+
+  const [visible, setVisible] = useState(!isHome); // always visible on non-home
   const [open, setOpen]       = useState(false);
   const barRef = useRef<HTMLDivElement | null>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrolled = useRef(false);
 
-  // Show nav on: mouse move near top OR scroll down
+  // On non-home pages: always visible, no hide behavior
+  // On home page: peek behavior (show on mouse near top or scroll)
   useEffect(() => {
+    if (!isHome) {
+      setVisible(true);
+      return;
+    }
+    // Home page peek behavior
+    setVisible(false);
     const show = () => {
       setVisible(true);
-      // Auto-hide after 3s of inactivity ONLY when at the top of the page
       if (hideTimer.current) clearTimeout(hideTimer.current);
       if (!scrolled.current) {
         hideTimer.current = setTimeout(() => {
@@ -50,14 +60,12 @@ export default function NavBar({
         setVisible(true);
         if (hideTimer.current) clearTimeout(hideTimer.current);
       } else {
-        // Back at top — start hide timer
         if (hideTimer.current) clearTimeout(hideTimer.current);
         hideTimer.current = setTimeout(() => setVisible(false), 2000);
       }
     };
 
     const onMouseMove = (e: MouseEvent) => {
-      // Show whenever mouse is in the top 120px, or always (feels better)
       if (e.clientY < 120 || scrolled.current) show();
     };
 
@@ -68,7 +76,7 @@ export default function NavBar({
       window.removeEventListener("scroll", onScroll);
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
-  }, []);
+  }, [isHome]);
 
   // Keep --nav-h CSS var in sync
   useEffect(() => {

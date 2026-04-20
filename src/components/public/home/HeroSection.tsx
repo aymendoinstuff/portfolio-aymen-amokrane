@@ -81,6 +81,8 @@ export default function HeroSection({
                 src={url}
                 alt=""
                 aria-hidden
+                fetchPriority="high"
+                decoding="async"
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-black/50" />
