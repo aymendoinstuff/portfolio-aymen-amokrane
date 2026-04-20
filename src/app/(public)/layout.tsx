@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 import { getServerSiteSettings } from "@/lib/settings/server";
 import Footer from "@/components/public/common/Footer";
 import NavBar from "@/components/public/common/Navbar";
+import HeavyScroller from "@/components/public/home/HeavyScroller";
 
 export default async function SiteLayout({
   children,
@@ -15,7 +16,7 @@ export default async function SiteLayout({
   const settings = await getServerSiteSettings();
 
   return (
-    <>
+    <HeavyScroller>
       <NavBar
         brand={settings.nav.brand}
         logoUrl={settings.nav.logoUrl}
@@ -24,6 +25,6 @@ export default async function SiteLayout({
       {/* paddingTop compensates for fixed navbar; on homepage the navbar hides so we keep a small offset */}
       <div style={{ paddingTop: "var(--nav-h, 0px)" }}>{children}</div>
       <Footer footer={settings.footer} />
-    </>
+    </HeavyScroller>
   );
 }

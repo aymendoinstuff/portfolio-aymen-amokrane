@@ -128,7 +128,7 @@ export default async function AdminPage() {
               Quick Actions
             </h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-gray-100">
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-gray-100">
             {quickActions.map(({ label, href, icon: Icon }) => (
               <Link
                 key={label}

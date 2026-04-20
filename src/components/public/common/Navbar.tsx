@@ -120,7 +120,7 @@ export default function NavBar({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="uppercase tracking-[0.2em] text-[12px] hover:underline"
+                  className="uppercase tracking-[0.2em] text-[12px] hover:underline focus-visible:underline focus-visible:outline-none"
                 >
                   {link.label}
                 </Link>
@@ -130,7 +130,7 @@ export default function NavBar({
             <div className="flex items-center gap-3">
               <Link
                 href="/contact"
-                className="rounded-full border-2 border-black px-5 py-2 text-sm md:text-base inline-flex items-center gap-2"
+                className="rounded-full border-2 border-black px-5 py-2 text-sm md:text-base inline-flex items-center gap-2 hover:bg-black hover:text-white transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
                 aria-label="Contact"
               >
                 <span className="font-medium">Let&apos;s do stuff</span>
@@ -138,8 +138,8 @@ export default function NavBar({
               </Link>
               <button
                 onClick={() => setOpen(!open)}
-                className="md:hidden rounded-full border-2 px-2 py-2"
-                aria-label="Open Menu"
+                className="md:hidden rounded-full border-2 px-2 py-2 hover:bg-black hover:text-white transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                aria-label={open ? "Close menu" : "Open menu"}
               >
                 <Menu size={18} />
               </button>

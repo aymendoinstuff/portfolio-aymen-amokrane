@@ -1,7 +1,6 @@
 import { repoGetPublishedProjects } from "@/lib/repositories/projects";
 import { repoGetPublishedArticles } from "@/lib/repositories/articles";
 import { getServerSiteSettings } from "@/lib/settings/server";
-import EdgeLabel from "@/components/EdgeLabel";
 import ScrollReveal from "@/components/ScrollReveal";
 import PageIntroTransition from "@/components/public/home/PageIntroTransition";
 import HeroSection from "@/components/public/home/HeroSection";
@@ -10,7 +9,6 @@ import ClientsSection from "@/components/public/home/ClientsSection";
 import ArticlesSection from "@/components/public/home/ArticlesSection";
 import TestimonialsSection from "@/components/public/home/TestimonialsSection";
 import NumbersSection from "@/components/public/home/NumbersSection";
-import HeavyScroller from "@/components/public/home/HeavyScroller";
 
 export default async function HomePage() {
   // Fetch data
@@ -121,10 +119,7 @@ export default async function HomePage() {
         tintOpacity: 0.35,
       }}
     >
-      <HeavyScroller>
         <main className="relative">
-          <EdgeLabel>Scroll v</EdgeLabel>
-
           {/* Render sections in the order defined by admin (sorted by `order`) */}
           {sections.map((s) =>
             renderSection(
@@ -138,7 +133,6 @@ export default async function HomePage() {
             )
           )}
         </main>
-      </HeavyScroller>
     </PageIntroTransition>
   );
 }

@@ -30,7 +30,7 @@ export default function ArticlesSection({ articles }: ArticlesSectionProps) {
       <div className="grid md:grid-cols-3 gap-5">
         {showPlaceholder
           ? Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2.5">
+              <div key={i} className="flex flex-col gap-2.5" role="status" aria-busy="true" aria-label="Loading article">
                 <div className="bg-gray-200 rounded-xl aspect-[3/4] w-full animate-pulse" />
                 <div className="space-y-1.5">
                   <div className="h-3.5 bg-gray-200 rounded w-3/4 animate-pulse" />
@@ -42,13 +42,15 @@ export default function ArticlesSection({ articles }: ArticlesSectionProps) {
           : displayArticles.map((article) => (
               <article key={article.id} className="group flex flex-col gap-2.5">
                 {/* Cover — always 3:4, full image shown (no crop) */}
-                <Link href={`/blog/${article.slug}`} className="block overflow-hidden rounded-xl bg-gray-100">
+                <Link href={`/blog/${article.slug}`} className="block overflow-hidden rounded-xl bg-gray-100 focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2">
                   {article.coverUrl ? (
                     <div className="aspect-[3/4] overflow-hidden">
                       <img
                         src={article.coverUrl}
                         alt={article.title}
-                        className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full h-full object-cover object-center group-hover:scale-[1.03] transition-transform duration-500"
                       />
                     </div>
                   ) : (

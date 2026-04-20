@@ -34,7 +34,7 @@ export default function FeaturedProjectsSection({
           <Link
             key={project.general.id}
             href={`/work/${project.general.slug}`}
-            className="block"
+            className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 rounded-[2px]"
           >
             <div className="relative rounded-[2px] overflow-hidden group cursor-pointer h-full">
               {/* Hero Image */}
@@ -44,12 +44,12 @@ export default function FeaturedProjectsSection({
                   alt={project.general.title}
                   loading="lazy"
                   decoding="async"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
                 />
               </div>
 
               {/* Hover overlay */}
-              <div className="absolute inset-0 bg-black/60 flex items-end p-4 opacity-0 group-hover:opacity-100 transition">
+              <div className="absolute inset-0 bg-black/60 flex items-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
                 <div className="text-white">
                   <div className="text-2xl md:text-3xl font-extrabold tracking-tight">
                     {project.general.title}
@@ -64,7 +64,7 @@ export default function FeaturedProjectsSection({
 
               {/* Tags */}
               {project.general.tags.length > 0 && (
-                <div className="absolute top-2 left-2 flex gap-2 flex-wrap opacity-0 group-hover:opacity-100 transition">
+                <div className="absolute top-2 left-2 flex gap-2 flex-wrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 ease-in-out">
                   {project.general.tags.slice(0, 2).map((tag) => (
                     <span
                       key={tag}

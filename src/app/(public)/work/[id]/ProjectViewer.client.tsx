@@ -17,8 +17,8 @@ export default function ProjectViewer({ project, relatedProjects = [] }: { proje
   return (
     <main className="min-h-screen bg-white">
 
-      {/* ── Sticky header ── */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
+      {/* ── Sticky header ── sits below the fixed navbar */}
+      <header className="sticky top-[var(--nav-h,0px)] z-40 bg-white border-b border-gray-100">
         <div className="max-w-screen-2xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link
             href="/work"

@@ -73,7 +73,7 @@ export default function Footer({ className = "", footer }: FooterProps) {
           <div className="mt-6">
             <Link
               href={ctaHref}
-              className="rounded-full border-2 border-white px-6 py-3 inline-flex items-center gap-2 text-base"
+              className="rounded-full border-2 border-white px-6 py-3 inline-flex items-center gap-2 text-base hover:bg-white hover:text-black transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
             >
               <span>{ctaLabel}</span>
               <ArrowUpRight size={18} />
@@ -87,12 +87,13 @@ export default function Footer({ className = "", footer }: FooterProps) {
           <form className="grid grid-cols-[1fr_auto] gap-2" onSubmit={(e) => e.preventDefault()}>
             <input
               type="email"
+              required
               placeholder="you@email.com"
-              className="px-3 py-2 rounded-full bg-transparent border-2 border-white placeholder-white/60 text-white"
+              className="px-3 py-2 rounded-full bg-transparent border-2 border-white placeholder-white/60 text-white focus:outline-none focus:border-white/80"
             />
             <button
-              type="button"
-              className="rounded-full border-2 border-white px-4 py-2 inline-flex items-center gap-2"
+              type="submit"
+              className="rounded-full border-2 border-white px-4 py-2 inline-flex items-center gap-2 hover:bg-white hover:text-black transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
             >
               <Send size={16} />
               <span>Subscribe</span>
@@ -122,7 +123,7 @@ export default function Footer({ className = "", footer }: FooterProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={platformLabel(s.platform)}
-                  className="p-2 rounded-full border border-white/40 hover:border-white transition-colors"
+                  className="p-2 rounded-full border border-white/40 hover:border-white transition-colors focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
                 >
                   <SocialIcon platform={s.platform} size={15} />
                 </a>

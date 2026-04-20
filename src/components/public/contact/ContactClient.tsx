@@ -81,6 +81,7 @@ function WishlistSection({
                     {visible.map((p, i) => (
                       <div
                         key={p.id}
+                        title={p.title}
                         className="px-4 py-2 rounded-t-xl text-[10px] font-bold uppercase tracking-widest border border-b-0 mr-1 truncate max-w-[110px]"
                         style={{
                           background: i === 0 ? "#FDF6E3" : `rgba(200,168,90,${0.15 + i * 0.08})`,
@@ -486,7 +487,9 @@ function InquirySection({ title }: { title: string }) {
                   <textarea className={textareaCls} rows={5} placeholder="Tell me anything..." value={fields.message} onChange={(e) => set("message", e.target.value)} required />
                 </div>
                 {status === "error" && (
-                  <p className="text-sm text-red-500">Something went wrong. Please try again.</p>
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                    Something went wrong. Please try again or email directly.
+                  </p>
                 )}
                 <button type="submit" disabled={status === "sending"} className={BTN_PRIMARY}>
                   {status === "sending" ? "Sending…" : "Send Message"}

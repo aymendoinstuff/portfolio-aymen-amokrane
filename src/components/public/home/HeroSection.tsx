@@ -100,7 +100,7 @@ export default function HeroSection({
           <BigWordRotator words={words} interval={INTERVAL} />
         </div>
         <div className="mt-10">
-          <Link href={heroCta.href} className="inline-block">
+          <Link href={heroCta.href} className="inline-block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-black rounded-full">
             {/* Transparent white button with pulsing status dot */}
             <span className="group inline-flex items-center gap-3 rounded-full border-2 border-white/70 bg-white/10 px-8 py-3.5 md:px-10 md:py-4 text-sm md:text-base uppercase tracking-[0.2em] text-white backdrop-blur-sm transition-all duration-300 hover:bg-white hover:text-black hover:border-white">
               {/* Pulsing dot */}
