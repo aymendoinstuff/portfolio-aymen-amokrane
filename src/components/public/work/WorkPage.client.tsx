@@ -9,14 +9,23 @@ import { WorkSection } from "./WorkGallerySection";
 import { CollaborationProposals } from "./CollaborationProposalsSections";
 import { ResultsBadge } from "./ResultsBadge";
 
+// First 6 services shown as individual filter pills
+const MAIN_SERVICES = [
+  "Brand Strategy",
+  "Advertising Campaign",
+  "Branding",
+  "Visual Identity Design",
+  "Illustration",
+  "Web Design",
+];
+
 export type WorkPageProps = Readonly<{
   allProjects: Project[];
   latest?: Project;
   collabs: CollaborationDoc[];
 }>;
 
-
-export default function WorkPageClient ({
+export default function WorkPageClient({
   allProjects,
   latest,
   collabs,
@@ -25,23 +34,36 @@ export default function WorkPageClient ({
     () => sortDesc(unique(allProjects.map((p) => p.general.year))),
     [allProjects]
   );
-  const cats = useMemo(
-    () => unique(allProjects.flatMap((p) => p.general.tags)),
-    [allProjects]
-  );
 
   const [filterYear, setFilterYear] = useState<string>("All");
   const [filterCat, setFilterCat] = useState<string>("All");
 
-  const filtered = useMemo(
-    () =>
-      allProjects.filter(
-        (p) =>
-          (filterYear === "All" || p.general.year === Number(filterYear)) &&
-          (filterCat === "All" || p.general.tags.includes(filterCat))
-      ),
-    [allProjects, filterYear, filterCat]
-  );
+  const noFilters = filterYear === "All" && filterCat === "All";
+
+  const filtered = useMemo(() => {
+    const base = allProjects.filter((p) => {
+      const yearMatch =
+        filterYear === "All" || p.general.year === Number(filterYear);
+
+      let catMatch = true;
+      if (filterCat !== "All") {
+        const services = p.notes?.services ?? [];
+        if (filterCat === "Others") {
+          // matches projects that have at least one service NOT in MAIN_SERVICES
+          catMatch = services.some((s) => !MAIN_SERVICES.includes(s));
+        } else {
+          catMatch = services.includes(filterCat);
+        }
+      }
+      return yearMatch && catMatch;
+    });
+
+    // When no filters: exclude the latest from grid (it's shown as featured hero)
+    if (noFilters && latest) {
+      return base.filter((p) => p.general.id !== latest.general.id);
+    }
+    return base;
+  }, [allProjects, filterYear, filterCat, noFilters, latest]);
 
   return (
     <>
@@ -53,13 +75,12 @@ export default function WorkPageClient ({
           </h2>
           <WorkFilters
             years={years}
-            cats={cats}
             filterYear={filterYear}
             filterCat={filterCat}
             onYearChange={setFilterYear}
             onCatChange={setFilterCat}
           >
-            <ResultsBadge count={filtered.length} />
+            <ResultsBadge count={noFilters ? allProjects.length : filtered.length} />
           </WorkFilters>
         </Container>
       </section>
@@ -69,7 +90,8 @@ export default function WorkPageClient ({
         <h2 id="work-heading" className="sr-only">
           Work
         </h2>
-        <WorkSection projects={filtered} latest={latest} />
+        {/* Only show featured latest when no filters are active */}
+        <WorkSection projects={filtered} latest={noFilters ? latest : undefined} />
       </section>
 
       <div className="border-t my-10" />

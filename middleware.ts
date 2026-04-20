@@ -33,16 +33,9 @@ export function middleware(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const hasSession = Boolean(req.cookies.get(SESSION_COOKIE_NAME)?.value);
 
-  // If a signed-in user hits the login page, send them somewhere useful.
-  if (pathname === PUBLIC_LOGIN_PATH && hasSession) {
-    const nextParam = normalizeNext(searchParams.get("next"));
-    const redirectPath = nextParam ?? DEFAULT_AFTER_LOGIN;
-
-    const url = req.nextUrl.clone();
-    url.pathname = redirectPath;
-    url.search = ""; // drop leftover params
-    return NextResponse.redirect(url);
-  }
+  // NOTE: We intentionally do NOT auto-redirect signed-in users away from /login
+  // here because the Edge can only check cookie presence, not validity.
+  // A stale/invalid cookie would cause an infinite redirect loop.
 
   // Only guard the routes we explicitly mark as protected.
   const needsAuth = startsWithAny(pathname, PROTECTED_PREFIXES);

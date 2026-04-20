@@ -3,12 +3,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useForm, type SubmitHandler, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SettingsSchema, type SiteSettings } from "./schema";
-import {
-  getSiteSettings,
-  saveSiteSettings,
-  getAvailableCollaborationIds,
-  resetSiteSettingsFromJson,
-} from "@/app/admin/settings/lib/site-client";
+import { getSiteSettings } from "@/app/admin/settings/lib/site-client";
 
 export function useSettingsForm() {
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -16,7 +11,6 @@ export function useSettingsForm() {
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [initializing, setInitializing] = useState<boolean>(true);
   const [isPending, startTransition] = useTransition();
-  const [collabIds, setCollabIds] = useState<string[]>([]);
   const initialRef = useRef<SiteSettings | null>(null);
 
   const form = useForm<SiteSettings, unknown, SiteSettings>({
@@ -38,8 +32,6 @@ export function useSettingsForm() {
       setLoadError(null);
       try {
         await reload();
-        const ids = await getAvailableCollaborationIds();
-        if (alive) setCollabIds(ids);
       } catch {
         if (alive) setLoadError("Failed to load site settings.");
       } finally {
@@ -68,25 +60,22 @@ export function useSettingsForm() {
     startTransition(async () => {
       try {
         const validated = SettingsSchema.parse(values);
-        await saveSiteSettings(validated);
+        const payload = JSON.parse(JSON.stringify(validated));
+        const res = await fetch("/api/admin/settings/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error("Save failed");
+        // Reset the form with the exact validated data that was just saved.
+        // Do NOT re-fetch from Firestore — the client-side getDoc can return
+        // stale / unauthenticated data and silently fall back to DEFAULT_SETTINGS,
+        // which wipes all arrays (testimonials, clients, etc.).
         initialRef.current = validated;
-        setSaveSuccess("Settings saved successfully.");
+        form.reset(validated, { keepDirty: false });
+        setSaveSuccess("Saved");
       } catch {
-        setSaveError("Could not save settings. Please review inputs.");
-      }
-    });
-  };
-
-  const resetAllToJson = async () => {
-    setSaveError(null);
-    setSaveSuccess(null);
-    startTransition(async () => {
-      try {
-        await resetSiteSettingsFromJson();
-        await reload();
-        setSaveSuccess("Settings reset from JSON defaults.");
-      } catch {
-        setSaveError("Failed to reset from JSON defaults.");
+        setSaveError("Could not save settings. Please try again.");
       }
     });
   };
@@ -99,8 +88,6 @@ export function useSettingsForm() {
     initializing,
     isPending,
     onSubmit,
-    resetAllToJson,
     initialSnapshot: initialRef,
-    collabIds,
   };
 }

@@ -8,9 +8,8 @@ import {
   LayoutDashboard,
   FolderKanban,
   FileText,
-  Mail,
-  Users,
-  Settings,
+  CalendarDays,
+  Globe,
   ExternalLink,
   type LucideIcon,
 } from "lucide-react";
@@ -24,9 +23,8 @@ const LINKS: AdminLink[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/projects", label: "Projects", icon: FolderKanban },
   { href: "/admin/articles", label: "Articles", icon: FileText },
-  { href: "/admin/inbox", label: "Inbox", icon: Mail },
-  { href: "/admin/collaborations", label: "Collaborations", icon: Users },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+  { href: "/admin/studio", label: "Studio", icon: CalendarDays },
+  { href: "/admin/settings", label: "Site Editor", icon: Globe },
 ];
 
 export default function AdminSidebar() {

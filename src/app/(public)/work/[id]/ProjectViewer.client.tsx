@@ -8,9 +8,9 @@ import Image from "next/image";
 import type { Project } from "@/lib/types/project";
 import { BlocksRenderer } from "./BlocksRenderer";
 
-export default function ProjectViewer({ project }: { project: Project }) {
+export default function ProjectViewer({ project, relatedProjects = [] }: { project: Project; relatedProjects?: Project[] }) {
   const [notesOpen, setNotesOpen] = useState(false);
-  const { general, main, extra } = project;
+  const { general, main, notes, extra } = project;
 
   useEscapeClose(notesOpen, () => setNotesOpen(false));
 
@@ -30,7 +30,9 @@ export default function ProjectViewer({ project }: { project: Project }) {
 
           <span className="text-sm font-semibold tracking-tight truncate max-w-xs">
             {general.title}
-            <span className="text-gray-400 font-normal ml-2">{general.year}</span>
+            {general.year && (
+              <span className="text-gray-400 font-normal ml-2">{general.year}</span>
+            )}
           </span>
 
           <button
@@ -61,23 +63,27 @@ export default function ProjectViewer({ project }: { project: Project }) {
             </div>
           )}
 
-          {/* Project title block */}
-          <div className="max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-20 border-b border-gray-100">
-            <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-              {main.details.client} — {general.year}
-            </p>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1] mb-5">
+          {/* Project title block — title → tagline → summary → tags */}
+          <div className="max-w-5xl mx-auto px-6 md:px-10 py-12 md:py-20">
+            <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-[1] mb-4">
               {general.title}
             </h1>
-            {main.details.tagline && (
-              <p className="text-lg md:text-xl text-gray-500 max-w-2xl leading-relaxed">
+
+            {main?.details?.tagline && (
+              <p className="text-lg md:text-xl text-gray-500 max-w-2xl leading-relaxed mb-4">
                 {main.details.tagline}
+              </p>
+            )}
+
+            {main?.details?.summary && (
+              <p className="text-base text-gray-500 max-w-3xl leading-relaxed mb-6">
+                {main.details.summary}
               </p>
             )}
 
             {/* Tags */}
             {general.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-6">
+              <div className="flex flex-wrap gap-2">
                 {general.tags.map((t) => (
                   <span
                     key={t}
@@ -109,13 +115,13 @@ export default function ProjectViewer({ project }: { project: Project }) {
           {notesOpen && (
             <motion.aside
               initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 360, opacity: 1 }}
+              animate={{ width: "45vw", opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ type: "tween", duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="shrink-0 border-l border-gray-200 bg-white sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto z-30"
+              className="shrink-0 bg-white sticky top-14 h-[calc(100vh-3.5rem)] overflow-y-auto z-30"
             >
-              <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-                <span className="text-sm font-semibold">Project Notes</span>
+              <div className="px-8 py-5 flex items-center justify-between sticky top-0 bg-white z-10">
+                <span className="text-sm font-semibold tracking-tight">About the project</span>
                 <button
                   onClick={() => setNotesOpen(false)}
                   className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
@@ -124,85 +130,97 @@ export default function ProjectViewer({ project }: { project: Project }) {
                 </button>
               </div>
 
-              <div className="p-5 space-y-7 text-sm">
-                <NotesSection label="Overview">
-                  <NoteRow label="Client" value={main.details.client} />
-                  <NoteRow label="Sector" value={main.details.sector} />
-                  <NoteRow label="Discipline" value={main.details.discipline?.join(" / ")} />
-                  {main.details.summary && (
-                    <NoteRow label="Summary" value={main.details.summary} />
-                  )}
-                  {main.brief && (
-                    <div>
-                      <NoteLabel>Brief</NoteLabel>
-                      <p className="text-gray-600 leading-relaxed">{main.brief}</p>
-                    </div>
-                  )}
-                </NotesSection>
+              <div className="px-8 pb-10 text-sm space-y-8">
 
-                {(main.details.services?.length || main.details.deliverables?.length) && (
-                  <NotesSection label="Scope">
-                    {main.details.services?.length ? (
-                      <NoteList label="Services" items={main.details.services} />
-                    ) : null}
-                    {main.details.deliverables?.length ? (
-                      <NoteList label="Deliverables" items={main.details.deliverables} />
-                    ) : null}
-                  </NotesSection>
+                {/* Brief — full width first */}
+                {notes?.brief && (
+                  <div>
+                    <p className="text-gray-700 leading-relaxed">{notes.brief}</p>
+                  </div>
                 )}
 
-                {main.details.team?.length ? (
-                  <NotesSection label="Team">
-                    <ul className="space-y-1.5">
-                      {main.details.team.map((m, i) => (
-                        <li key={i} className="flex justify-between">
-                          <span className="font-medium text-gray-800">{m.name}</span>
-                          <span className="text-gray-400">{m.role}</span>
-                        </li>
+                {/* 2-column grid for metadata */}
+                <div className="grid grid-cols-2 gap-x-8 gap-y-6">
+                  {notes?.client && <NoteRow label="Client" value={notes.client} />}
+                  {notes?.industry && <NoteRow label="Industry" value={notes.industry} />}
+                  {(notes?.year || general.year) && (
+                    <NoteRow label="Year" value={String(notes?.year || general.year)} />
+                  )}
+                  {notes?.region && <NoteRow label="Office" value={notes.region} />}
+                  {notes?.deliverables && <NoteRow label="Deliverables" value={notes.deliverables} />}
+                </div>
+
+                {/* Services — full width as pills */}
+                {notes?.services?.length ? (
+                  <div>
+                    <NoteLabel>Services</NoteLabel>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {notes.services.map((svc) => (
+                        <span
+                          key={svc}
+                          className="px-2.5 py-1 border border-gray-200 rounded-full text-xs text-gray-600"
+                        >
+                          {svc}
+                        </span>
                       ))}
-                    </ul>
-                  </NotesSection>
-                ) : null}
-
-                <NotesSection label="Details">
-                  {main.details.timeline && (
-                    <NoteRow
-                      label="Timeline"
-                      value={
-                        "label" in main.details.timeline
-                          ? main.details.timeline.label
-                          : `${main.details.timeline.start}${main.details.timeline.end ? ` → ${main.details.timeline.end}` : ""}`
-                      }
-                    />
-                  )}
-                  {main.details.location && (
-                    <NoteRow label="Location" value={main.details.location} />
-                  )}
-                </NotesSection>
-
-                {main.details.links && Object.values(main.details.links).some(Boolean) && (
-                  <NotesSection label="Links">
-                    <div className="flex flex-col gap-2">
-                      {main.details.links.behance && (
-                        <ExtLink href={main.details.links.behance} label="Behance" />
-                      )}
-                      {main.details.links.caseStudy && (
-                        <ExtLink href={main.details.links.caseStudy} label="Case Study" />
-                      )}
-                      {main.details.links.liveSite && (
-                        <ExtLink href={main.details.links.liveSite} label="Live Site" />
-                      )}
-                      {main.details.links.repo && (
-                        <ExtLink href={main.details.links.repo} label="Repository" />
-                      )}
                     </div>
-                  </NotesSection>
-                )}
+                  </div>
+                ) : null}
               </div>
             </motion.aside>
           )}
         </AnimatePresence>
       </div>
+
+      {/* ── Related Projects ── */}
+      {relatedProjects.length > 0 && (
+        <div className="max-w-5xl mx-auto px-6 md:px-10 py-16 border-t border-gray-100">
+          <h2 className="text-4xl md:text-6xl tracking-tight leading-[0.95] mb-8">
+            Related Projects
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            {relatedProjects.map((p) => (
+              <Link
+                key={p.general.id}
+                href={`/work/${p.general.id}`}
+                className="group block overflow-hidden rounded-2xl bg-gray-100"
+              >
+                {/* Thumbnail */}
+                <div className="aspect-video overflow-hidden">
+                  {p.general.heroUrl ? (
+                    <Image
+                      src={p.general.heroUrl}
+                      alt={p.general.title}
+                      width={800}
+                      height={450}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400 text-sm">
+                      No image
+                    </div>
+                  )}
+                </div>
+                {/* Info */}
+                <div className="p-4">
+                  <h4 className="font-bold text-xl text-gray-900 group-hover:underline underline-offset-4 leading-snug">
+                    {p.general.title}
+                  </h4>
+                  {p.general.tags?.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {p.general.tags.slice(0, 3).map((tag) => (
+                        <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full bg-white text-gray-500 font-medium">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
@@ -229,34 +247,6 @@ function NoteRow({ label, value }: { label: string; value?: string }) {
       <NoteLabel>{label}</NoteLabel>
       <p className="text-gray-700">{value}</p>
     </div>
-  );
-}
-
-function NoteList({ label, items }: { label: string; items: string[] }) {
-  return (
-    <div>
-      <NoteLabel>{label}</NoteLabel>
-      <ul className="space-y-0.5">
-        {items.map((s, i) => (
-          <li key={i} className="text-gray-700 flex items-start gap-1.5">
-            <span className="text-gray-300 mt-1">—</span> {s}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function ExtLink({ href, label }: { href: string; label: string }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className="flex items-center gap-1.5 text-gray-700 hover:text-black underline underline-offset-2 transition-colors"
-    >
-      {label} <ExternalLink size={12} />
-    </a>
   );
 }
 

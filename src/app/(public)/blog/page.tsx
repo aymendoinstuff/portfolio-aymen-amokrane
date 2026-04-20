@@ -1,35 +1,31 @@
-import SectionTitle from "@/components/SectionTitle";
-import Placeholder from "@/components/public/common/Placeholder";
-import { Btn } from "@/components/public/common/ui";
-import Link from "next/link";
+export const dynamic = "force-dynamic";
 
-export default function BlogPage() {
+import { repoGetPublishedArticles } from "@/lib/repositories/articles";
+import { getServerSiteSettings } from "@/lib/settings/server";
+import ArticleList from "@/components/public/blog/ArticleList";
+
+export default async function BlogPage() {
+  const [articles, settings] = await Promise.all([
+    repoGetPublishedArticles(50),
+    getServerSiteSettings(),
+  ]);
+
+  // Collect unique categories from actual articles + any defined in blog settings
+  const articleCategories = [...new Set(articles.map((a) => a.category).filter(Boolean))] as string[];
+  const settingCategories = settings.blog?.categories ?? [];
+  const categories = [...new Set([...settingCategories, ...articleCategories])];
+
   return (
-    <>
-      <main className="max-w-5xl mx-auto px-4 py-12">
-        <SectionTitle>Articles</SectionTitle>
-        <div className="grid gap-6">
-          {new Array(6).fill(0).map((_, i) => (
-            <div
-              key={i}
-              className="grid md:grid-cols-[260px_1fr] gap-4 items-start"
-            >
-              <Placeholder className="h-32 w-full rounded-xl" />
-              <div>
-                <div className="font-medium">Article Title {i + 1}</div>
-                <p className="text-sm opacity-80 mt-1">
-                  Short description of the article as a two-line teaser.
-                </p>
-                <div className="mt-3">
-                  <Link href="#">
-                    <Btn className="px-3 py-1 text-sm">Read more</Btn>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
-    </>
+    <main className="max-w-3xl mx-auto px-4 py-16">
+      {/* Header */}
+      <div className="mb-12">
+        <h1 className="text-4xl md:text-6xl tracking-tight leading-[0.95]">Articles</h1>
+        <p className="mt-3 text-gray-500 text-base">
+          Thoughts on branding, design systems, and building things that last.
+        </p>
+      </div>
+
+      <ArticleList articles={articles} categories={categories} />
+    </main>
   );
 }

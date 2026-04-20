@@ -8,6 +8,8 @@
 html,
 body {
   height: 100%;
+  /* Prevent MacBook/iOS rubber-band overscroll from showing white space */
+  overscroll-behavior: none;
 }
 body {
   background: #fff;

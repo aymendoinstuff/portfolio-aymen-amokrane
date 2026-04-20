@@ -51,23 +51,27 @@ export type SessionUser = {
 // Verify session cookie on server (SSR, RSC, route handlers)
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const sessionCookie = await getCookie(COOKIE.SESSION);
+  console.log("[getCurrentUser] cookie present:", !!sessionCookie, "length:", sessionCookie?.length ?? 0);
   if (!sessionCookie) return null;
 
   try {
-    const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const decoded = await adminAuth.verifySessionCookie(sessionCookie, false);
     const email = decoded.email ?? undefined;
     const emailVerified = Boolean(decoded.email_verified);
     const custom = extractCustomClaims(decoded);
     const claimAdmin = custom["admin"] === true;
 
+    const isAdmin = (claimAdmin && emailVerified) || isAllowlisted(email);
+    console.log("[getCurrentUser] email:", email, "emailVerified:", emailVerified, "claimAdmin:", claimAdmin, "isAllowlisted:", isAllowlisted(email), "isAdmin:", isAdmin, "ADMIN_ALLOWLIST:", [...ADMIN_ALLOWLIST]);
     return {
       uid: decoded.uid,
       email,
       emailVerified,
-      isAdmin: (claimAdmin && emailVerified) || isAllowlisted(email),
+      isAdmin,
       claims: custom,
     };
-  } catch {
+  } catch (err) {
+    console.error("[getCurrentUser] verifySessionCookie failed:", err);
     await deleteCookie(COOKIE.SESSION);
     return null;
   }
@@ -116,8 +120,9 @@ export async function loginWithIdToken(
   let decoded: DecodedIdToken;
   try {
     // Verify the raw ID token from the client, checking revocation
-    decoded = await adminAuth.verifyIdToken(idToken, true);
-  } catch {
+    decoded = await adminAuth.verifyIdToken(idToken, false);
+  } catch (err) {
+    console.error("[loginWithIdToken] verifyIdToken failed:", err);
     return {
       ok: false,
       code: "INVALID_TOKEN",

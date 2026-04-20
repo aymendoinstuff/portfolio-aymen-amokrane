@@ -37,12 +37,25 @@ export default function LoginPage() {
     try {
       setBusy(true);
       const idToken = await getGoogleIdToken();
-      const res = await loginAction(idToken, nextPath); // server sets cookie + redirects
-      console.log(res)
-      if (res?.ok === false) {
-        setMsg(res.message || "Sign-in failed. Please try again.");
+
+      // Use the API route — it sets cookies via NextResponse.cookies which
+      // is reliable, unlike server actions + redirect().
+      const res = await fetch("/api/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ idToken }),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        setMsg(data.error || "Sign-in failed. Please try again.");
         setBusy(false);
+        return;
       }
+
+      // Full browser navigation so the cookie is committed before the next request
+      window.location.href = nextPath;
     } catch (e) {
       console.error(e);
       setMsg("Popup blocked or sign-in cancelled.");

@@ -19,6 +19,7 @@ export function ProjectThumb({
   priority?: boolean;
 }) {
   const [imgError, setImgError] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   const ratioClass =
     ratio === "3x1"
@@ -65,6 +66,13 @@ export function ProjectThumb({
       aria-label={p.general.title}
     >
       <div className={cn("relative w-full", ratioClass)}>
+        {/* Skeleton shimmer — shows while image is loading */}
+        {!imgLoaded && !imgError && (
+          <div className="absolute inset-0 bg-gray-100 overflow-hidden">
+            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.4s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+          </div>
+        )}
+
         {!imgError && p.general.heroUrl ? (
           <Image
             // Keyed to identity to avoid stale images when list changes
@@ -73,21 +81,22 @@ export function ProjectThumb({
             alt={p.general.title}
             fill
             sizes={computedSizes}
-            // keep visuals identical to your design
-            className="object-cover transition-transform duration-700 ease-out will-change-transform group-hover:scale-105 select-none"
+            // fade in once loaded; keep hover scale
+            className={cn(
+              "object-cover transition-[transform,opacity] duration-700 ease-out will-change-transform group-hover:scale-105 select-none",
+              imgLoaded ? "opacity-100" : "opacity-0"
+            )}
             // quality helps compression artifacts without ballooning size
             quality={85}
-            // nice-to-have: blur placeholder if your model carries it
-            // placeholder={p.general.blurDataURL ? "blur" : "empty"}
-            // blurDataURL={p.general.blurDataURL}
             // loading hints
             priority={priority}
+            onLoad={() => setImgLoaded(true)}
             onError={() => setImgError(true)}
             draggable={false}
           />
-        ) : (
-          <div className="w-full h-full bg-gray-200" />
-        )}
+        ) : imgError ? (
+          <div className="absolute inset-0 bg-gray-200" />
+        ) : null}
 
         {/* Gradient overlay for readability */}
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white/80 via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />

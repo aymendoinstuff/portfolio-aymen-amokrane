@@ -3,48 +3,69 @@
 import { useMemo, useState } from "react";
 import { useForm, type DeepPartial } from "react-hook-form";
 import Link from "next/link";
-import { firestore } from "@/lib/firebase/client";
-import { doc, setDoc } from "firebase/firestore";
-import type { Project, ProjectTimeline, ProjectTeamMember } from "@/lib/types/project";
+import type { Project, Block } from "@/lib/types/project";
 import DropZone from "@/components/admin/ui/DropZone";
 import TagInput from "@/components/admin/ui/TagInput";
 import { toast, ToastContainer } from "@/components/admin/ui/Toast";
 import BlockEditor from "@/components/admin/BlockEditor";
-import type { ExtraBlock } from "@/lib/types/project";
+import { DeleteProjectButton } from "@/components/admin/ui/DeleteProjectButton";
+import { slugify } from "@/lib/utils/slugify";
 import {
   ArrowLeft,
   Loader2,
-  Plus,
   Eye,
   EyeOff,
   Image as ImageIcon,
-  ExternalLink,
-  Users,
-  MapPin,
-  Clock,
-  Link2,
   Briefcase,
-  Globe,
-  Github,
-  X,
 } from "lucide-react";
 
-// ---------- Utils ----------
-function slugify(input: string) {
-  return input
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\- ]+/g, "")
-    .replace(/\s+/g, "-");
-}
+// Industries dropdown list
+const INDUSTRIES = [
+  "Technology",
+  "Finance & Banking",
+  "Healthcare & Pharma",
+  "Retail & E-commerce",
+  "Food & Beverage",
+  "Fashion & Luxury",
+  "Real Estate",
+  "Education",
+  "Entertainment & Media",
+  "Sports & Fitness",
+  "Travel & Hospitality",
+  "Automotive",
+  "Energy & Sustainability",
+  "Non-Profit & Social Impact",
+  "Government & Public Sector",
+  "Music & Arts",
+  "Beauty & Wellness",
+  "Architecture & Design",
+  "Logistics & Supply Chain",
+  "Legal & Professional Services",
+];
 
-// ---------- Types ----------
-type Props = {
-  id?: string;
-  initial?: Partial<Project>;
-};
+// Services multi-select list
+const SERVICES = [
+  "Brand Strategy",
+  "Advertising Campaign",
+  "Branding",
+  "Visual Identity Design",
+  "Illustration",
+  "Web Design",
+  "Brand Facelift",
+  "Brand Guidelines",
+  "Art Direction",
+  "Copywriting",
+  "Packaging Design",
+  "Motion Design",
+  "Social Media Design",
+  "UX/UI Design",
+  "Print & Editorial",
+  "Photography Direction",
+  "Campaign Strategy",
+  "Content Creation",
+];
 
-// ---------- Small UI Pieces ----------
+// ─── Small UI Components ───────────────────────────────────────
 function SectionCard({
   title,
   icon,
@@ -103,7 +124,15 @@ const inputCls =
 const textareaCls =
   "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all resize-y placeholder:text-gray-400";
 
-// ---------- Main Component ----------
+const selectCls =
+  "w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all";
+
+// ─── Main Component ────────────────────────────────────────────
+type Props = {
+  id?: string;
+  initial?: Partial<Project>;
+};
+
 export default function ProjectForm({ id, initial }: Props) {
   const defaultValues = useMemo<DeepPartial<Project>>(
     () => ({
@@ -113,31 +142,25 @@ export default function ProjectForm({ id, initial }: Props) {
         slug: initial?.general?.slug ?? "",
         year: initial?.general?.year ?? new Date().getFullYear(),
         tags: initial?.general?.tags ?? [],
-        industry: initial?.general?.industry ?? "",
         heroUrl: initial?.general?.heroUrl ?? "",
-        quotes: initial?.general?.quotes ?? [],
         published: initial?.general?.published ?? false,
         createdAt: initial?.general?.createdAt ?? Date.now(),
         updatedAt: initial?.general?.updatedAt ?? Date.now(),
       },
       main: {
-        brief: initial?.main?.brief ?? "",
-        gallery: initial?.main?.gallery ?? [],
         details: {
-          client: initial?.main?.details?.client ?? "",
-          sector: initial?.main?.details?.sector ?? "",
-          discipline: initial?.main?.details?.discipline ?? [],
           tagline: initial?.main?.details?.tagline ?? "",
           summary: initial?.main?.details?.summary ?? "",
-          team: initial?.main?.details?.team ?? [],
-          services: initial?.main?.details?.services ?? [],
-          deliverables: initial?.main?.details?.deliverables ?? [],
-          timeline: initial?.main?.details?.timeline as
-            | ProjectTimeline
-            | undefined,
-          location: initial?.main?.details?.location ?? "",
-          links: initial?.main?.details?.links ?? {},
         },
+      },
+      notes: {
+        brief: initial?.notes?.brief ?? "",
+        client: initial?.notes?.client ?? "",
+        industry: initial?.notes?.industry ?? "",
+        services: initial?.notes?.services ?? [],
+        year: initial?.notes?.year ?? new Date().getFullYear(),
+        region: initial?.notes?.region ?? "",
+        deliverables: initial?.notes?.deliverables ?? "",
       },
       extra: initial?.extra ?? undefined,
     }),
@@ -149,23 +172,15 @@ export default function ProjectForm({ id, initial }: Props) {
   });
 
   const [saving, setSaving] = useState(false);
-  const [blocks, setBlocks] = useState<ExtraBlock[]>(
+  const [blocks, setBlocks] = useState<Block[]>(
     initial?.extra?.blocks ?? []
   );
 
   // Watched values
-  const team: ProjectTeamMember[] = watch("main.details.team") ?? [];
-  const timeline = watch("main.details.timeline") as ProjectTimeline | undefined;
   const tags: string[] = watch("general.tags") ?? [];
-  const discipline: string[] = watch("main.details.discipline") ?? [];
-  const services: string[] = watch("main.details.services") ?? [];
-  const deliverables: string[] = watch("main.details.deliverables") ?? [];
   const heroUrl: string = watch("general.heroUrl") ?? "";
   const published: boolean = watch("general.published") ?? false;
-
-  // Timeline helpers
-  const isTimelineLabel = (tl?: ProjectTimeline): tl is { label: string } =>
-    typeof tl === "object" && tl !== null && "label" in tl;
+  const services: string[] = watch("notes.services") ?? [];
 
   // Submit
   const onSubmit = async (data: Project) => {
@@ -184,9 +199,18 @@ export default function ProjectForm({ id, initial }: Props) {
         },
         extra: blocks.length > 0 ? { blocks } : undefined,
       };
-      await setDoc(doc(firestore, "projects", _id), payload, { merge: true });
+      // Strip undefined values (Firestore rejects them)
+      const clean = JSON.parse(JSON.stringify(payload));
+      const res = await fetch("/api/admin/projects/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(clean),
+      });
+      if (!res.ok) throw new Error(await res.text());
       toast.success("Project saved successfully");
-    } catch {
+    } catch (err) {
+      console.error("[ProjectForm] save error:", err);
       toast.error("Failed to save — check your connection");
     } finally {
       setSaving(false);
@@ -230,6 +254,14 @@ export default function ProjectForm({ id, initial }: Props) {
             {published ? "Published" : "Draft"}
           </button>
 
+          {id && (
+            <DeleteProjectButton
+              id={id}
+              title={watch("general.title")}
+              variant="full"
+            />
+          )}
+
           <button
             type="submit"
             disabled={saving}
@@ -268,37 +300,34 @@ export default function ProjectForm({ id, initial }: Props) {
             {/* OVERVIEW */}
             <SectionCard title="Overview" icon={<Briefcase size={14} />}>
               <div className="grid gap-4">
-                <Field label="Tagline" hint="Short punchy line">
+                <Field label="Tagline" hint="Short slogan">
                   <input
                     className={inputCls}
                     placeholder="e.g. Rebranding a challenger bank"
                     {...register("main.details.tagline")}
                   />
                 </Field>
-                <Field label="Brief" hint="Concise project overview">
-                  <textarea
-                    className={`${textareaCls} min-h-[100px]`}
-                    placeholder="Describe the project in a few sentences…"
-                    {...register("main.brief")}
-                  />
-                </Field>
-                <Field label="Summary" hint="One-line summary for listings">
+                <Field label="Summary" hint="Small body text">
                   <input
                     className={inputCls}
                     placeholder="e.g. Full brand identity and digital design system"
-                    {...register("main.details.summary", { required: true })}
+                    {...register("main.details.summary")}
+                  />
+                </Field>
+                <Field label="Tags">
+                  <TagInput
+                    value={tags}
+                    onChange={(v) => setValue("general.tags", v)}
+                    placeholder="Add tag, press Enter…"
                   />
                 </Field>
               </div>
             </SectionCard>
 
-            {/* LAYOUT BUILDER */}
-            <SectionCard
-              title="Page Layout"
-              icon={<span className="text-sm">⊞</span>}
-            >
+            {/* GALLERY BLOCKS */}
+            <SectionCard title="Page Layout" icon={<span className="text-sm">⊞</span>}>
               <p className="text-xs text-gray-500 mb-4">
-                Build your project page block by block — like Pentagram. Drag to reorder.
+                Build your project gallery block by block. Drag to reorder.
               </p>
               <BlockEditor blocks={blocks} onChange={setBlocks} />
             </SectionCard>
@@ -307,287 +336,88 @@ export default function ProjectForm({ id, initial }: Props) {
           {/* ── RIGHT SIDEBAR ── */}
           <div className="grid gap-5 content-start">
 
-            {/* PROJECT INFO */}
-            <SectionCard title="Project Info" icon={<Briefcase size={14} />}>
+            {/* YEAR */}
+            <SectionCard title="Year" icon={<Briefcase size={14} />}>
+              <input
+                type="number"
+                className={inputCls}
+                {...register("notes.year", { valueAsNumber: true })}
+              />
+            </SectionCard>
+
+            {/* NOTES SECTION */}
+            <SectionCard title="Project Notes">
               <div className="grid gap-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Year">
-                    <input
-                      type="number"
-                      className={inputCls}
-                      {...register("general.year", { valueAsNumber: true })}
-                    />
-                  </Field>
-                  <Field label="Slug" hint="Auto">
-                    <input
-                      className={inputCls}
-                      placeholder="auto-generated"
-                      {...register("general.slug")}
-                    />
-                  </Field>
-                </div>
                 <Field label="Client">
                   <input
                     className={inputCls}
                     placeholder="e.g. Acme Corp"
-                    {...register("main.details.client", { required: true })}
+                    {...register("notes.client")}
                   />
                 </Field>
+
                 <Field label="Industry">
-                  <input
-                    className={inputCls}
-                    placeholder="e.g. Fintech"
-                    {...register("general.industry")}
-                  />
+                  <select
+                    className={selectCls}
+                    {...register("notes.industry")}
+                  >
+                    <option value="">Select industry…</option>
+                    {INDUSTRIES.map((ind) => (
+                      <option key={ind} value={ind}>
+                        {ind}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
-                <Field label="Sector">
-                  <input
-                    className={inputCls}
-                    placeholder="e.g. Banking & Finance"
-                    {...register("main.details.sector", { required: true })}
-                  />
-                </Field>
-              </div>
-            </SectionCard>
 
-            {/* TAGS & CATEGORIES */}
-            <SectionCard title="Tags & Disciplines">
-              <div className="grid gap-3">
-                <Field label="Tags">
-                  <TagInput
-                    value={tags}
-                    onChange={(v) => setValue("general.tags", v)}
-                    placeholder="Add tag, press Enter…"
-                  />
-                </Field>
-                <Field label="Disciplines">
-                  <TagInput
-                    value={discipline}
-                    onChange={(v) => setValue("main.details.discipline", v)}
-                    placeholder="e.g. Branding…"
-                  />
-                </Field>
                 <Field label="Services">
-                  <TagInput
-                    value={services}
-                    onChange={(v) => setValue("main.details.services", v)}
-                    placeholder="e.g. Strategy…"
-                  />
+                  <div className="grid gap-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-2 bg-gray-50">
+                    {SERVICES.map((svc) => (
+                      <label key={svc} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={services.includes(svc)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setValue("notes.services", [...services, svc]);
+                            } else {
+                              setValue(
+                                "notes.services",
+                                services.filter((s) => s !== svc)
+                              );
+                            }
+                          }}
+                          className="rounded border-gray-200"
+                        />
+                        <span className="text-sm text-gray-700">{svc}</span>
+                      </label>
+                    ))}
+                  </div>
                 </Field>
-                <Field label="Deliverables">
-                  <TagInput
-                    value={deliverables}
-                    onChange={(v) => setValue("main.details.deliverables", v)}
-                    placeholder="e.g. Brand guide…"
-                  />
-                </Field>
-              </div>
-            </SectionCard>
 
-            {/* TIMELINE & LOCATION */}
-            <SectionCard title="Timeline & Location">
-              <div className="grid gap-3">
-                {/* Timeline mode toggle */}
-                <div className="flex gap-1.5 p-1 bg-gray-100 rounded-lg">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setValue("main.details.timeline", {
-                        start: "",
-                        end: "",
-                      } as ProjectTimeline)
-                    }
-                    className={[
-                      "flex-1 py-1.5 rounded-md text-xs font-semibold transition-all",
-                      !isTimelineLabel(timeline)
-                        ? "bg-white shadow text-black"
-                        : "text-gray-500 hover:text-gray-700",
-                    ].join(" ")}
-                  >
-                    <Clock size={11} className="inline mr-1" />
-                    Date Range
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setValue("main.details.timeline", {
-                        label: "",
-                      } as ProjectTimeline)
-                    }
-                    className={[
-                      "flex-1 py-1.5 rounded-md text-xs font-semibold transition-all",
-                      isTimelineLabel(timeline)
-                        ? "bg-white shadow text-black"
-                        : "text-gray-500 hover:text-gray-700",
-                    ].join(" ")}
-                  >
-                    Freeform
-                  </button>
-                </div>
-
-                {isTimelineLabel(timeline) ? (
+                <Field label="Region" hint="Optional">
                   <input
-                    placeholder="e.g. 2021–2023"
                     className={inputCls}
-                    value={timeline.label ?? ""}
-                    onChange={(e) =>
-                      setValue("main.details.timeline", {
-                        label: e.currentTarget.value,
-                      })
-                    }
+                    placeholder="e.g. Europe"
+                    {...register("notes.region")}
                   />
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      placeholder="Start (YYYY-MM)"
-                      className={inputCls}
-                      value={
-                        !isTimelineLabel(timeline)
-                          ? (timeline?.start ?? "")
-                          : ""
-                      }
-                      onChange={(e) =>
-                        setValue("main.details.timeline", {
-                          start: e.currentTarget.value,
-                          end: !isTimelineLabel(timeline)
-                            ? (timeline?.end ?? "")
-                            : "",
-                        })
-                      }
-                    />
-                    <input
-                      placeholder="End (optional)"
-                      className={inputCls}
-                      value={
-                        !isTimelineLabel(timeline)
-                          ? (timeline?.end ?? "")
-                          : ""
-                      }
-                      onChange={(e) =>
-                        setValue("main.details.timeline", {
-                          start: !isTimelineLabel(timeline)
-                            ? (timeline?.start ?? "")
-                            : "",
-                          end: e.currentTarget.value,
-                        })
-                      }
-                    />
-                  </div>
-                )}
-
-                <Field label="Location" hint="Optional">
-                  <div className="relative">
-                    <MapPin
-                      size={14}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      className={`${inputCls} pl-8`}
-                      placeholder="e.g. Paris, France"
-                      {...register("main.details.location")}
-                    />
-                  </div>
                 </Field>
-              </div>
-            </SectionCard>
 
-            {/* LINKS */}
-            <SectionCard title="Links" icon={<Link2 size={14} />}>
-              <div className="grid gap-2.5">
-                {[
-                  {
-                    key: "main.details.links.behance" as const,
-                    label: "Behance",
-                    icon: <Globe size={14} />,
-                    placeholder: "https://behance.net/…",
-                  },
-                  {
-                    key: "main.details.links.caseStudy" as const,
-                    label: "Case Study",
-                    icon: <ExternalLink size={14} />,
-                    placeholder: "https://…",
-                  },
-                  {
-                    key: "main.details.links.liveSite" as const,
-                    label: "Live Site",
-                    icon: <Globe size={14} />,
-                    placeholder: "https://…",
-                  },
-                  {
-                    key: "main.details.links.repo" as const,
-                    label: "Repository",
-                    icon: <Github size={14} />,
-                    placeholder: "https://github.com/…",
-                  },
-                ].map(({ key, label, icon, placeholder }) => (
-                  <div key={key} className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                      {icon}
-                    </div>
-                    <input
-                      className={`${inputCls} pl-8`}
-                      placeholder={`${label}: ${placeholder}`}
-                      {...register(key)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
+                <Field label="Brief" hint="Optional">
+                  <textarea
+                    className={`${textareaCls} min-h-[100px]`}
+                    placeholder="Describe the project context and approach…"
+                    {...register("notes.brief")}
+                  />
+                </Field>
 
-            {/* TEAM */}
-            <SectionCard title="Team" icon={<Users size={14} />}>
-              <div className="grid gap-2">
-                {(team as { name: string; role: string }[]).map((m, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="flex-1 grid grid-cols-2 gap-1.5">
-                      <input
-                        value={m.name}
-                        onChange={(e) => {
-                          const next = [...team];
-                          next[i] = { ...next[i], name: e.currentTarget.value };
-                          setValue("main.details.team", next);
-                        }}
-                        placeholder="Name"
-                        className={inputCls}
-                      />
-                      <input
-                        value={m.role}
-                        onChange={(e) => {
-                          const next = [...team];
-                          next[i] = { ...next[i], role: e.currentTarget.value };
-                          setValue("main.details.team", next);
-                        }}
-                        placeholder="Role"
-                        className={inputCls}
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setValue(
-                          "main.details.team",
-                          team.filter((_, ix) => ix !== i)
-                        )
-                      }
-                      className="text-gray-400 hover:text-red-500 transition-colors p-1 rounded-lg hover:bg-red-50"
-                    >
-                      <X size={15} />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() =>
-                    setValue("main.details.team", [
-                      ...team,
-                      { name: "", role: "" },
-                    ])
-                  }
-                  className="flex items-center gap-2 text-sm text-gray-500 hover:text-black transition-colors py-1"
-                >
-                  <Plus size={15} />
-                  Add team member
-                </button>
+                <Field label="Deliverables" hint="Optional">
+                  <textarea
+                    className={`${textareaCls} min-h-[80px]`}
+                    placeholder="List deliverables, comma-separated or line-by-line…"
+                    {...register("notes.deliverables")}
+                  />
+                </Field>
               </div>
             </SectionCard>
           </div>

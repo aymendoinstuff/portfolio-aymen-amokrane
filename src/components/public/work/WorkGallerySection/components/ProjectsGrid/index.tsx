@@ -41,13 +41,14 @@ export function ProjectsGrid({ projects }: ProjectsGridProps) {
 
   return (
     <div>
-      {rows.map((row) => {
+      {rows.map((row, rowIndex) => {
+        const isFirst = rowIndex === 0;
         switch (row.type) {
           case "WIDE":
             // key is derived from the project's identity, not the index
-            return <GridRowWide key={row.key} a={row.items[0]} />;
+            return <GridRowWide key={row.key} a={row.items[0]} priority={isFirst} />;
           case "TWO_UP":
-            return <GridRowTwoUp key={row.key} items={row.items} />;
+            return <GridRowTwoUp key={row.key} items={row.items} priority={isFirst} />;
           case "FEATURE":
           default:
             return <GridRowFeature key={row.key} items={row.items} />;

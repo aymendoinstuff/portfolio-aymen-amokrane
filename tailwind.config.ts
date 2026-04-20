@@ -20,8 +20,13 @@ export default {
         'pg-jitter': 'pg-jitter 0.44s ease-in-out infinite',
         'pg-sweep': 'pg-sweep 0.9s ease-in-out infinite',
         'fadeSlideUp': 'fadeSlideUp 0.22s ease-out',
+        'shimmer': 'shimmer 1.4s infinite',
       },
       keyframes: {
+        'shimmer': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(200%)' },
+        },
         'pg-jitter': {
           '0%': { transform: 'translate3d(0,0,0) rotate(0)' },
           '20%': { transform: 'translate3d(calc(-1 * var(--pg-jitter-x)), var(--pg-jitter-y), 0) rotate(calc(-1 * var(--pg-jitter-deg)))' },

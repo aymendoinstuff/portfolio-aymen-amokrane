@@ -1,8 +1,8 @@
 import ArticleForm from "@/components/admin/ArticleForm";
+
 export default function NewArticle() {
   return (
-    <main className="grid gap-4">
-      <div className="text-xl font-semibold">New Article</div>
+    <main className="p-6">
       <ArticleForm />
     </main>
   );

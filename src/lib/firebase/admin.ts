@@ -21,18 +21,15 @@ function init(): App {
   let privateKey = process.env.FIREBASE_PRIVATE_KEY;
   if (privateKey && privateKey.includes("\\n"))
     privateKey = privateKey.replace(/\\n/g, "\n");
-  if (projectId && clientEmail && privateKey) {
-    try {
-      return initializeApp({
-        credential: cert({ projectId, clientEmail, privateKey }),
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      });
-    } catch {
-      // Fall through to applicationDefault
-    }
+
+  if (!projectId || !clientEmail || !privateKey) {
+    throw new Error(
+      `Firebase Admin: missing env vars — projectId=${!!projectId}, clientEmail=${!!clientEmail}, privateKey=${!!privateKey}`
+    );
   }
+
   return initializeApp({
-    credential: applicationDefault(),
+    credential: cert({ projectId, clientEmail, privateKey }),
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
 }

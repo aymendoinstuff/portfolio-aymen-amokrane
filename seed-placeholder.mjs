@@ -39,9 +39,10 @@ PXLqx/cOosBN9p9YEnoWc12u
 
 const db = getFirestore(app);
 
-// All images use picsum with unique seeds so every slot is a different photo
-const col = (w, h, _hex, seed) => `https://picsum.photos/seed/${seed}/${w}/${h}`;
-const pic = (w, h, seed) => `https://picsum.photos/seed/${seed}/${w}/${h}`;
+// All images use picsum with auto-incrementing numeric seeds
+let _s = 1;
+const col = (w, h, _hex, _label) => `https://picsum.photos/seed/${_s++}/${w}/${h}`;
+const pic = (w, h, _seed) => `https://picsum.photos/seed/${_s++}/${w}/${h}`;
 
 const now = Date.now();
 

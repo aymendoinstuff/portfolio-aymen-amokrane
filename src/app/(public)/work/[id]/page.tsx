@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getBaseUrl } from "@/lib/getBaseUrl";
 import type { Project } from "@/lib/types/project";
 import ProjectViewer from "./ProjectViewer.client";
+import { repoGetPublishedProjects } from "@/lib/repositories/projects";
 
 export const revalidate = 60; // same cache policy as multi-project page
 export const dynamicParams = true; // ✅ allow fallback for new ids
@@ -82,8 +83,22 @@ export default async function ProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const project = await getProject(id);
-  console.log(project)
+  const [project, allProjects] = await Promise.all([
+    getProject(id),
+    repoGetPublishedProjects(20),
+  ]);
   if (!project) notFound();
-  return <ProjectViewer project={project}/>;
+
+  // 2 related projects: same tags first, then any others
+  const related = allProjects
+    .filter((p) => p.general.id !== id && p.general.slug !== id)
+    .sort((a, b) => {
+      const aTags = project.general.tags ?? [];
+      const aShared = a.general.tags?.filter((t) => aTags.includes(t)).length ?? 0;
+      const bShared = b.general.tags?.filter((t) => aTags.includes(t)).length ?? 0;
+      return bShared - aShared;
+    })
+    .slice(0, 2);
+
+  return <ProjectViewer project={project} relatedProjects={related} />;
 }

@@ -412,11 +412,11 @@ export default function PageIntroTransition({
         )}
       </AnimatePresence>
 
-      {/* Content */}
+      {/* Content — w-full so hero and other full-bleed sections go edge-to-edge */}
       <motion.div
         animate={content}
         initial={{ opacity: 0 }}
-        className="relative z-10"
+        className="relative z-10 w-full"
       >
         {children}
       </motion.div>

@@ -37,6 +37,7 @@ export async function loginAction(idToken: string, next?: string) {
     return { ok: false as const, message: res.message };
   }
 
-  revalidatePath("/");
-  redirect(sanitizeNext(next));   // success path never returns
+  // Return redirect path to client — let the browser navigate so the
+  // Set-Cookie header is fully committed before the next request fires.
+  return { ok: true as const, redirectTo: sanitizeNext(next) };
 }

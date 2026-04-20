@@ -1,9 +1,18 @@
 import FilterPill from "./components/FilterPill";
 
+// First 6 shown individually; everything else is grouped under "Others"
+const CATEGORY_PILLS = [
+  "Brand Strategy",
+  "Advertising Campaign",
+  "Branding",
+  "Visual Identity Design",
+  "Illustration",
+  "Web Design",
+  "Others",
+];
 
 export type WorkFilterBarProps = Readonly<{
   years: number[];
-  cats: string[];
   filterYear: string;
   filterCat: string;
   onYearChange: (y: string) => void;
@@ -13,7 +22,6 @@ export type WorkFilterBarProps = Readonly<{
 
 export function WorkFilters({
   years,
-  cats,
   filterYear,
   filterCat,
   onYearChange,
@@ -52,7 +60,7 @@ export function WorkFilters({
           >
             All
           </FilterPill>
-          {cats.map((c) => (
+          {CATEGORY_PILLS.map((c) => (
             <FilterPill
               key={c}
               active={filterCat === c}

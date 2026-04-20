@@ -4,7 +4,7 @@ import Link from "next/link";
 import {
   FolderKanban,
   FileText,
-  Briefcase,
+  CalendarDays,
   Users,
   Plus,
   ArrowRight,
@@ -44,10 +44,10 @@ export default async function AdminPage() {
       accent: "bg-blue-600",
     },
     {
-      label: "Offers",
+      label: "Bookings",
       value: offersCountSnap.data().count,
-      icon: Briefcase,
-      href: "/admin/inbox",
+      icon: CalendarDays,
+      href: "/admin/studio",
       color: "bg-amber-50 text-amber-600",
       accent: "bg-amber-600",
     },
@@ -64,7 +64,7 @@ export default async function AdminPage() {
   const quickActions = [
     { label: "New Project", href: "/admin/projects/new", icon: FolderKanban },
     { label: "New Article", href: "/admin/articles/new", icon: FileText },
-    { label: "View Inbox", href: "/admin/inbox", icon: Briefcase },
+    { label: "Studio", href: "/admin/studio", icon: CalendarDays },
     { label: "Settings", href: "/admin/settings", icon: Users },
   ];
 

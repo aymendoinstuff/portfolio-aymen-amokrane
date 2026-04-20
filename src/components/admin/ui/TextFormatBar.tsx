@@ -1,7 +1,16 @@
 "use client";
 
-import type { TextStyle } from "@/lib/types/project";
 import { useState } from "react";
+
+type TextStyle = {
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  align?: "left" | "center" | "right";
+  size?: "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  color?: string;
+  font?: "sans" | "serif" | "mono";
+};
 import {
   Bold,
   Italic,

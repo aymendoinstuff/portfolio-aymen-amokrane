@@ -138,22 +138,27 @@ export const Checkbox = ({
    Button
 ------------------------------------------------------- */
 export const Button: React.FC<
-  React.ButtonHTMLAttributes<HTMLButtonElement>
-> = ({ children, className, ...rest }) => (
-  <button
-    {...rest}
-    className={[
-      "inline-flex items-center justify-center",
-      "rounded-xl border border-gray-300 bg-white",
-      "px-4 py-2 text-sm font-medium",
-      "shadow-sm transition hover:bg-gray-50",
-      "disabled:opacity-50",
-      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black",
-      className,
-    ]
-      .filter(Boolean)
-      .join(" ")}
-  >
-    {children}
-  </button>
-);
+  React.ButtonHTMLAttributes<HTMLButtonElement> & { size?: "sm" | "md" }
+> = ({ children, className, size = "md", ...rest }) => {
+  const sizeClasses =
+    size === "sm" ? "px-2 py-1 text-xs" : "px-4 py-2 text-sm";
+  return (
+    <button
+      {...rest}
+      className={[
+        "inline-flex items-center justify-center",
+        "rounded-xl border border-gray-300 bg-white",
+        "font-medium",
+        "shadow-sm transition hover:bg-gray-50",
+        "disabled:opacity-50",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black",
+        sizeClasses,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {children}
+    </button>
+  );
+};
