@@ -1,33 +1,17 @@
 /**
- * Email notification utility using nodemailer.
+ * Email notifications via Resend (https://resend.com)
+ * Uses fetch directly — no extra package needed.
  *
- * Required env vars (add to .env.local + Vercel):
- *   SMTP_HOST     — e.g. smtp.gmail.com  |  smtp.zoho.com
- *   SMTP_PORT     — 587 (TLS) or 465 (SSL)
- *   SMTP_USER     — your full email address used to send
- *   SMTP_PASS     — app password (not your login password)
- *   NOTIFY_EMAIL  — where to receive notifications (hello@stuffbyaymen.com)
+ * Required env var: RESEND_API_KEY
+ * Optional:         NOTIFY_EMAIL (defaults to hello@stuffbyaymen.com)
  */
 
-import nodemailer from "nodemailer";
-
-const {
-  SMTP_HOST,
-  SMTP_PORT,
-  SMTP_USER,
-  SMTP_PASS,
-  NOTIFY_EMAIL = "hello@stuffbyaymen.com",
-} = process.env;
-
-function createTransport() {
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: Number(SMTP_PORT ?? 587),
-    secure: Number(SMTP_PORT ?? 587) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASS },
-  });
-}
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL ?? "hello@stuffbyaymen.com";
+// Resend requires a verified sender domain. Using onboarding@resend.dev works
+// on the free plan for testing. Once you verify stuffbyaymen.com in Resend dashboard,
+// change this to: hello@stuffbyaymen.com
+const FROM_EMAIL = "Stuff by Aymen <onboarding@resend.dev>";
 
 function formatBookingEmail(data: Record<string, unknown>): { subject: string; html: string } {
   const type = String(data.type ?? "inquiry");
@@ -48,7 +32,7 @@ function formatBookingEmail(data: Record<string, unknown>): { subject: string; h
   const subject = `[stuffbyaymen.com] ${label} from ${name}`;
 
   const rows = Object.entries(data)
-    .filter(([k]) => !["type"].includes(k))
+    .filter(([k]) => k !== "type")
     .map(
       ([k, v]) =>
         `<tr>
@@ -69,7 +53,7 @@ function formatBookingEmail(data: Record<string, unknown>): { subject: string; h
           ${rows}
         </table>
         <div style="margin-top:20px;padding:16px;background:#f5f5f5;border-radius:8px">
-          <p style="margin:0;font-size:12px;color:#888">Reply directly to this email to reach <strong>${name}</strong> at <a href="mailto:${email}" style="color:#111">${email}</a></p>
+          <p style="margin:0;font-size:12px;color:#888">Reply to this email to reach <strong>${name}</strong> at <a href="mailto:${email}" style="color:#111">${email}</a></p>
         </div>
       </div>
     </div>
@@ -79,27 +63,36 @@ function formatBookingEmail(data: Record<string, unknown>): { subject: string; h
 }
 
 export async function sendBookingNotification(data: Record<string, unknown>) {
-  const transport = createTransport();
-
-  if (!transport) {
-    // SMTP not configured — log so it's visible in server logs
-    console.warn("[email] SMTP not configured. Booking data:", data);
+  if (!RESEND_API_KEY) {
+    console.warn("[email] RESEND_API_KEY not set — skipping email notification");
     return;
   }
 
   const { subject, html } = formatBookingEmail(data);
 
   try {
-    await transport.sendMail({
-      from: `"Stuff by Aymen" <${SMTP_USER}>`,
-      to: NOTIFY_EMAIL,
-      replyTo: String(data.email ?? SMTP_USER),
-      subject,
-      html,
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: [NOTIFY_EMAIL],
+        reply_to: String(data.email ?? NOTIFY_EMAIL),
+        subject,
+        html,
+      }),
     });
-    console.log(`[email] Notification sent → ${NOTIFY_EMAIL}`);
+
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("[email] Resend error:", err);
+    } else {
+      console.log(`[email] Sent via Resend → ${NOTIFY_EMAIL}`);
+    }
   } catch (err) {
-    // Never crash the booking request because of email failure
-    console.error("[email] Failed to send notification:", err);
+    console.error("[email] Failed to send:", err);
   }
 }
