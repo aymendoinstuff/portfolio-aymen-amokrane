@@ -55,7 +55,7 @@ export default async function HomePage() {
       case "clients":
         return (
           <ScrollReveal key="clients" delay={0.05}>
-            <ClientsSection clients={settings.home?.clients ?? []} />
+            <ClientsSection clients={settings.home?.clients ?? []} label={settings.home?.clientsLabel} />
           </ScrollReveal>
         );
       case "articles":

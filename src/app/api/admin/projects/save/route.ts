@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import { getCurrentUser } from "@/server/auth/server";
+import { requireAdminApi } from "@/server/auth/apiGuard";
 
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const deny = await requireAdminApi();
+  if (deny) return deny;
 
   try {
     const payload = await req.json();

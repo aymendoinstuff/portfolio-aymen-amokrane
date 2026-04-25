@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { z } from "zod";
+import { requireAdminApi } from "@/server/auth/apiGuard";
 
 const EventSchema = z.object({
   title: z.string().min(1),
@@ -16,6 +17,9 @@ const EventSchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
+  const deny = await requireAdminApi();
+  if (deny) return deny;
+
   try {
     const { searchParams } = new URL(req.url);
     const month = searchParams.get("month"); // YYYY-MM
@@ -37,6 +41,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const deny = await requireAdminApi();
+  if (deny) return deny;
+
   try {
     const json = await req.json();
     const parsed = EventSchema.safeParse(json);
@@ -65,6 +72,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const deny = await requireAdminApi();
+  if (deny) return deny;
+
   try {
     const json = await req.json();
     const { id, ...updates } = json;
@@ -79,6 +89,9 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const deny = await requireAdminApi();
+  if (deny) return deny;
+
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id");

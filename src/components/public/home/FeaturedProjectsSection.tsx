@@ -29,7 +29,7 @@ export default function FeaturedProjectsSection({
   return (
     <section className="max-w-6xl mx-auto px-4 py-16">
       <SectionTitle>Featured projects</SectionTitle>
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className={["grid gap-6", featured.length > 1 ? "md:grid-cols-2" : ""].join(" ")}>
         {featured.map((project) => (
           <Link
             key={project.general.id}

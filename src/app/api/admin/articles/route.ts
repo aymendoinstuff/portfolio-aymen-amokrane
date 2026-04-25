@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
+import { requireAdminApi } from "@/server/auth/apiGuard";
 
 export async function POST(req: NextRequest) {
+  const deny = await requireAdminApi();
+  if (deny) return deny;
+
   const data = await req.json().catch(() => null);
 
   // Minimal required fields for an article

@@ -3,18 +3,6 @@ export const dynamic = "force-dynamic";
 import { adminDb } from "@/lib/firebase/admin";
 import StudioClient from "./StudioClient";
 
-async function getBookings() {
-  try {
-    const snap = await adminDb
-      .collection("bookings")
-      .orderBy("createdAt", "desc")
-      .limit(100)
-      .get();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
-  } catch { return []; }
-}
-
 async function getEvents() {
   try {
     const now = new Date();
@@ -37,6 +25,6 @@ async function getEvents() {
 }
 
 export default async function StudioPage() {
-  const [bookings, events] = await Promise.all([getBookings(), getEvents()]);
-  return <StudioClient initialBookings={bookings} initialEvents={events} />;
+  const events = await getEvents();
+  return <StudioClient initialEvents={events} />;
 }

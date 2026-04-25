@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useForm, type DeepPartial } from "react-hook-form";
+import { useForm, useFieldArray, type DeepPartial } from "react-hook-form";
 import Link from "next/link";
 import type { Project, Block } from "@/lib/types/project";
 import DropZone from "@/components/admin/ui/DropZone";
@@ -17,6 +17,8 @@ import {
   EyeOff,
   Image as ImageIcon,
   Briefcase,
+  Plus,
+  Trash2,
 } from "lucide-react";
 
 // Industries dropdown list
@@ -161,13 +163,14 @@ export default function ProjectForm({ id, initial }: Props) {
         year: initial?.notes?.year ?? new Date().getFullYear(),
         region: initial?.notes?.region ?? "",
         deliverables: initial?.notes?.deliverables ?? "",
+        customNotes: initial?.notes?.customNotes ?? [],
       },
       extra: initial?.extra ?? undefined,
     }),
     [initial]
   );
 
-  const { register, handleSubmit, setValue, watch } = useForm<Project>({
+  const { register, handleSubmit, setValue, watch, control } = useForm<Project>({
     defaultValues: defaultValues as Project,
   });
 
@@ -181,6 +184,9 @@ export default function ProjectForm({ id, initial }: Props) {
   const heroUrl: string = watch("general.heroUrl") ?? "";
   const published: boolean = watch("general.published") ?? false;
   const services: string[] = watch("notes.services") ?? [];
+
+  const { fields: customNoteFields, append: appendCustomNote, remove: removeCustomNote } =
+    useFieldArray({ control, name: "notes.customNotes" as never });
 
   // Submit
   const onSubmit = async (data: Project) => {
@@ -314,6 +320,13 @@ export default function ProjectForm({ id, initial }: Props) {
                     {...register("main.details.summary")}
                   />
                 </Field>
+                <Field label="Brief" hint="Shown in project sidebar — use ## for sub-headings, blank line for new paragraph">
+                  <textarea
+                    className={`${textareaCls} min-h-[220px]`}
+                    placeholder={`Describe the project context and approach…\n\nYou can use:\n## Sub-heading\nParagraph text here.`}
+                    {...register("notes.brief")}
+                  />
+                </Field>
                 <Field label="Tags">
                   <TagInput
                     value={tags}
@@ -403,14 +416,6 @@ export default function ProjectForm({ id, initial }: Props) {
                   />
                 </Field>
 
-                <Field label="Brief" hint="Optional">
-                  <textarea
-                    className={`${textareaCls} min-h-[100px]`}
-                    placeholder="Describe the project context and approach…"
-                    {...register("notes.brief")}
-                  />
-                </Field>
-
                 <Field label="Deliverables" hint="Optional">
                   <textarea
                     className={`${textareaCls} min-h-[80px]`}
@@ -418,6 +423,43 @@ export default function ProjectForm({ id, initial }: Props) {
                     {...register("notes.deliverables")}
                   />
                 </Field>
+              </div>
+            </SectionCard>
+
+            {/* CUSTOM NOTES */}
+            <SectionCard title="Custom Notes">
+              <div className="grid gap-3">
+                {(customNoteFields as { id: string }[]).map((field, idx) => (
+                  <div key={field.id} className="border border-gray-200 rounded-xl p-3 grid gap-2 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <input
+                        className={`${inputCls} flex-1`}
+                        placeholder="Note title…"
+                        {...register(`notes.customNotes.${idx}.title` as never)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeCustomNote(idx)}
+                        className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <textarea
+                      className={`${textareaCls} min-h-[72px]`}
+                      placeholder="Note content…"
+                      {...register(`notes.customNotes.${idx}.content` as never)}
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => appendCustomNote({ title: "", content: "" })}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 border border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-black hover:text-black transition-colors"
+                >
+                  <Plus size={14} />
+                  Add note
+                </button>
               </div>
             </SectionCard>
           </div>

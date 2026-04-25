@@ -3,7 +3,7 @@ import * as React from "react";
 import type { UseFormReturn } from "react-hook-form";
 import type { SiteSettings } from "../schema";
 import { TextInput, Button } from "../ui/Inputs";
-import { BookOpen, Hash, Plus, Settings2 } from "lucide-react";
+import { BookOpen, Hash, Plus, Settings2, Type } from "lucide-react";
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
 
@@ -64,6 +64,21 @@ export function BlogTab({ form }: { form: UseFormReturn<SiteSettings> }) {
 
   return (
     <div className="grid gap-5">
+
+      {/* ── Page Heading ── */}
+      <SectionCard title="Page Heading" icon={<Type size={14} />}>
+        <div className="grid gap-4">
+          <Field label="Page title" hint="Shown at the top of the blog page">
+            <TextInput placeholder="Articles" {...form.register("blog.pageTitle")} />
+          </Field>
+          <Field label="Subtitle / description" hint="Shown below the title">
+            <TextInput
+              placeholder="Thoughts on branding, design systems, and building things that last."
+              {...form.register("blog.pageSubtitle")}
+            />
+          </Field>
+        </div>
+      </SectionCard>
 
       {/* ── Blog Settings ── */}
       <SectionCard title="Blog Settings" icon={<Settings2 size={14} />}>

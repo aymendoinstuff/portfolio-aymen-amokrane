@@ -51,7 +51,6 @@ export type SessionUser = {
 // Verify session cookie on server (SSR, RSC, route handlers)
 export async function getCurrentUser(): Promise<SessionUser | null> {
   const sessionCookie = await getCookie(COOKIE.SESSION);
-  console.log("[getCurrentUser] cookie present:", !!sessionCookie, "length:", sessionCookie?.length ?? 0);
   if (!sessionCookie) return null;
 
   try {
@@ -62,7 +61,6 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
     const claimAdmin = custom["admin"] === true;
 
     const isAdmin = (claimAdmin && emailVerified) || isAllowlisted(email);
-    console.log("[getCurrentUser] email:", email, "emailVerified:", emailVerified, "claimAdmin:", claimAdmin, "isAllowlisted:", isAllowlisted(email), "isAdmin:", isAdmin, "ADMIN_ALLOWLIST:", [...ADMIN_ALLOWLIST]);
     return {
       uid: decoded.uid,
       email,

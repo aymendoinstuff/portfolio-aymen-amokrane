@@ -1,11 +1,20 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Work",
+  description: "Brand design projects by Aymen Amokrane — identity systems, visual branding, and strategy-led design.",
+  alternates: { canonical: "/work" },
+  openGraph: { title: "Work — Aymen Amokrane", url: "/work", type: "website" },
+};
+
 import SectionTitle from "@/components/SectionTitle";
 import ScrollProgress from "@/components/ScrollProgress";
 import { Container } from "@/components/public/layout/Container"
 import type { Project } from "@/lib/types/project";
 import type { CollaborationDoc } from "@/lib/types/collaboration";
 
-
 import { getBaseUrl } from '@/lib/getBaseUrl';
+import { getServerSiteSettings } from "@/lib/settings/server";
 import WorkPageClient from "@/components/public/work/WorkPage.client";
 
 export const revalidate = 60;
@@ -31,22 +40,24 @@ async function getApprovedCollaborations(limit = 6) {
 }
 
 export default async function WorkPage() {
-  const [allProjects, collabs] = await Promise.all([
+  const [allProjects, collabs, settings] = await Promise.all([
     getPublishedProjects(24),
     getApprovedCollaborations(6),
+    getServerSiteSettings(),
   ]);
 
   const latest = allProjects[0];
+  const pageTitle = settings.work?.pageTitle || "Latest project";
 
   return (
     <main>
       <ScrollProgress />
       <section>
         <Container className="pt-8 pb-10">
-          <SectionTitle>Latest project</SectionTitle>
+          <SectionTitle>{pageTitle}</SectionTitle>
         </Container>
       </section>
-      <WorkPageClient  allProjects={allProjects} collabs={collabs} latest={latest} />
+      <WorkPageClient allProjects={allProjects} collabs={collabs} latest={latest} />
     </main>
   );
 }

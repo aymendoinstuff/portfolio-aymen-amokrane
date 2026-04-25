@@ -3,6 +3,7 @@ import Link from "next/link";
 import { adminDb } from "@/lib/firebase/admin";
 import { Plus, Eye, EyeOff, Pencil, ExternalLink } from "lucide-react";
 import { DeleteProjectButton } from "@/components/admin/ui/DeleteProjectButton";
+import { DuplicateProjectButton } from "@/components/admin/ui/DuplicateProjectButton";
 
 export const dynamic = "force-dynamic";
 
@@ -209,6 +210,7 @@ function ProjectCard({
             <ExternalLink size={12} />
             View
           </Link>
+          <DuplicateProjectButton id={project.id} title={project.title} />
           <DeleteProjectButton id={project.id} title={project.title} variant="icon" />
         </div>
       </div>

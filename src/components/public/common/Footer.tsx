@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
-import { ArrowUpRight, Instagram, Dribbble, Github, Linkedin, Send, Twitter, Youtube, Globe } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowUpRight, Instagram, Dribbble, Github, Linkedin, Send, Twitter, Youtube, Globe, MapPin, Mail as MailIcon, Phone, MessageCircle, Clock } from "lucide-react";
 import type { SiteSettings } from "@/app/admin/settings/schema";
 
 type FooterSettings = SiteSettings["footer"];
@@ -22,6 +23,11 @@ const DEFAULT_FOOTER: FooterSettings = {
   ],
   socialLinks: [],
   copyright: `© ${new Date().getFullYear()} Aymen Doin Stuff. All rights reserved.`,
+  contactEmail: "",
+  contactPhone: "",
+  contactWhatsapp: "",
+  contactLocation: "",
+  showDubaiTime: true,
 };
 
 // Maps platform key → lucide icon
@@ -45,6 +51,149 @@ function platformLabel(platform: string) {
     tiktok: "TikTok", pinterest: "Pinterest", behance: "Behance",
   };
   return map[platform.toLowerCase()] ?? platform;
+}
+
+// ── Dubai time ────────────────────────────────────────────────
+function DubaiTime() {
+  const [time, setTime] = useState<string>("");
+
+  useEffect(() => {
+    function tick() {
+      setTime(
+        new Intl.DateTimeFormat("en-GB", {
+          timeZone: "Asia/Dubai",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(new Date())
+      );
+    }
+    tick();
+    const id = setInterval(tick, 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!time) return null;
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-white/50">
+      <Clock size={11} />
+      Dubai {time}
+    </span>
+  );
+}
+
+// ── Contact strip ─────────────────────────────────────────────
+function ContactStrip({ footer }: { footer: FooterSettings }) {
+  const email    = footer.contactEmail    ?? "";
+  const phone    = footer.contactPhone    ?? "";
+  const whatsapp = footer.contactWhatsapp ?? "";
+  const location = footer.contactLocation ?? "";
+  const showTime = footer.showDubaiTime   ?? true;
+
+  const hasAny = email || phone || whatsapp || location || showTime;
+  if (!hasAny) return null;
+
+  return (
+    <div className="border-t border-white/10">
+      <div className="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center gap-x-8 gap-y-2">
+        {email && (
+          <a
+            href={`mailto:${email}`}
+            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors"
+          >
+            <MailIcon size={11} />
+            {email}
+          </a>
+        )}
+        {phone && (
+          <a
+            href={`tel:${phone.replace(/\s/g, "")}`}
+            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors"
+          >
+            <Phone size={11} />
+            {phone}
+          </a>
+        )}
+        {whatsapp && (
+          <a
+            href={`https://wa.me/${whatsapp.replace(/[^0-9]/g, "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors"
+          >
+            <MessageCircle size={11} />
+            WhatsApp
+          </a>
+        )}
+        {location && (
+          <span className="flex items-center gap-1.5 text-xs text-white/50">
+            <MapPin size={11} />
+            {location}
+          </span>
+        )}
+        {showTime && (
+          <span className="ml-auto">
+            <DubaiTime />
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NewsletterForm() {
+  const [email, setEmail] = useState("");
+  const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setState("loading");
+    try {
+      const res = await fetch("/api/public/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      setState(res.ok ? "done" : "error");
+    } catch {
+      setState("error");
+    }
+  }
+
+  if (state === "done") {
+    return (
+      <div className="flex items-center gap-2 px-4 py-3 rounded-full border-2 border-white/40 text-white/80 text-sm">
+        <Send size={14} className="shrink-0" />
+        <span>Newsletter coming soon — you&apos;re on the list!</span>
+      </div>
+    );
+  }
+
+  return (
+    <form className="grid grid-cols-[1fr_auto] gap-2" onSubmit={handleSubmit}>
+      <input
+        type="email"
+        required
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@email.com"
+        className="px-3 py-2 rounded-full bg-transparent border-2 border-white placeholder-white/60 text-white focus:outline-none focus:border-white/80"
+      />
+      <button
+        type="submit"
+        disabled={state === "loading"}
+        className="rounded-full border-2 border-white px-4 py-2 inline-flex items-center gap-2 hover:bg-white hover:text-black transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-60"
+      >
+        {state === "loading"
+          ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          : <Send size={16} />}
+        <span>Subscribe</span>
+      </button>
+      {state === "error" && (
+        <p className="col-span-2 text-xs text-red-400 px-1">Something went wrong. Try again.</p>
+      )}
+    </form>
+  );
 }
 
 export default function Footer({ className = "", footer }: FooterProps) {
@@ -83,22 +232,8 @@ export default function Footer({ className = "", footer }: FooterProps) {
 
         {/* Right — Links + socials */}
         <div className="grid gap-6">
-          {/* Newsletter stub */}
-          <form className="grid grid-cols-[1fr_auto] gap-2" onSubmit={(e) => e.preventDefault()}>
-            <input
-              type="email"
-              required
-              placeholder="you@email.com"
-              className="px-3 py-2 rounded-full bg-transparent border-2 border-white placeholder-white/60 text-white focus:outline-none focus:border-white/80"
-            />
-            <button
-              type="submit"
-              className="rounded-full border-2 border-white px-4 py-2 inline-flex items-center gap-2 hover:bg-white hover:text-black transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
-            >
-              <Send size={16} />
-              <span>Subscribe</span>
-            </button>
-          </form>
+          {/* Newsletter */}
+          <NewsletterForm />
 
           {/* Nav links — horizontal */}
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
@@ -134,6 +269,9 @@ export default function Footer({ className = "", footer }: FooterProps) {
           <div className="text-xs opacity-70">{copyright}</div>
         </div>
       </div>
+
+      {/* Contact strip */}
+      <ContactStrip footer={f} />
     </footer>
   );
 }

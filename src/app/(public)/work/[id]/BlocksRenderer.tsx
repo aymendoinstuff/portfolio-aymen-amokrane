@@ -67,7 +67,7 @@ export function BlocksRenderer({ blocks }: { blocks: Block[] }) {
           return (
             <section key={idx} className="w-full py-4">
               <figure>
-                <div className={`grid ${config.gridClass} gap-1 max-w-6xl mx-auto px-6`}>
+                <div className={`grid ${config.gridClass} gap-1 max-w-6xl mx-auto pl-10 pr-6 md:pl-24 md:pr-6`}>
                   {block.items.map((item, i) => (
                     <div
                       key={i}
@@ -78,7 +78,7 @@ export function BlocksRenderer({ blocks }: { blocks: Block[] }) {
                     </div>
                   ))}
                 </div>
-                <div className="max-w-6xl mx-auto px-6">
+                <div className="max-w-6xl mx-auto pl-10 pr-6 md:pl-24 md:pr-6">
                   {block.items.map((item, i) => (
                     <Caption key={i} text={item.caption} />
                   ))}
@@ -95,9 +95,27 @@ export function BlocksRenderer({ blocks }: { blocks: Block[] }) {
             right: "text-right",
           }[block.align];
 
+          const sizeClass = {
+            sm:   "text-sm",
+            base: "text-base",
+            lg:   "text-lg",
+            xl:   "text-xl",
+            "2xl":"text-2xl md:text-3xl",
+            "3xl":"text-3xl md:text-4xl",
+            "4xl":"text-4xl md:text-5xl",
+          }[block.size ?? "3xl"];
+
+          const weightClass = {
+            normal:   "font-normal",
+            medium:   "font-medium",
+            semibold: "font-semibold",
+            bold:     "font-bold",
+            black:    "font-black",
+          }[block.weight ?? "bold"];
+
           return (
             <section key={idx} className="w-full py-12">
-              <div className={`max-w-4xl mx-auto px-6 font-bold text-3xl md:text-4xl leading-tight ${alignClass}`}>
+              <div className={`max-w-4xl mx-auto pl-10 pr-6 md:pl-24 md:pr-6 leading-tight ${sizeClass} ${weightClass} ${alignClass}`}>
                 {block.content}
               </div>
             </section>

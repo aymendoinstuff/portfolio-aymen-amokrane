@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { SettingsSchema } from "@/app/admin/settings/schema";
+import { requireAdminApi } from "@/server/auth/apiGuard";
 
 /**
  * GET /api/admin/settings/load
@@ -8,6 +9,9 @@ import { SettingsSchema } from "@/app/admin/settings/schema";
  * Used by the admin settings form to load current saved values reliably.
  */
 export async function GET() {
+  const deny = await requireAdminApi();
+  if (deny) return deny;
+
   try {
     const snap = await adminDb.collection("site").doc("settings").get();
 

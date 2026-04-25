@@ -4,7 +4,7 @@ import type { UseFormReturn } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 import type { SiteSettings } from "../schema";
 import { TextInput, Textarea, Button } from "../ui/Inputs";
-import { Navigation, Plus, Trash2, Footprints, Copyright, ImageIcon, Share2 } from "lucide-react";
+import { Navigation, Plus, Trash2, Footprints, Copyright, ImageIcon, Share2, Mail, Briefcase } from "lucide-react";
 import { ImageUploader } from "../ui/ImageUploader";
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
@@ -153,6 +153,13 @@ export function GeneralTab({ form }: { form: UseFormReturn<SiteSettings> }) {
         </div>
       </SectionCard>
 
+      {/* ── Work Page ── */}
+      <SectionCard title="Work Page" icon={<Briefcase size={14} />}>
+        <Field label="Page title" hint="Shown above the latest project">
+          <TextInput placeholder="Latest project" {...form.register("work.pageTitle")} />
+        </Field>
+      </SectionCard>
+
       {/* ── Footer ── */}
       <SectionCard title="Footer" icon={<Footprints size={14} />}>
         <div className="grid gap-4 mb-6">
@@ -169,6 +176,40 @@ export function GeneralTab({ form }: { form: UseFormReturn<SiteSettings> }) {
             <Field label="CTA button link">
               <TextInput placeholder="/contact" {...form.register("footer.ctaButton.href")} />
             </Field>
+          </div>
+        </div>
+
+        {/* Contact Info strip */}
+        <div className="border-t border-gray-100 pt-5 mb-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Mail size={13} className="text-gray-400" />
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Contact Info Strip</p>
+          </div>
+          <div className="grid gap-3">
+            <div className="grid md:grid-cols-2 gap-3">
+              <Field label="Email">
+                <TextInput placeholder="you@example.com" {...form.register("footer.contactEmail")} />
+              </Field>
+              <Field label="Phone / Mobile">
+                <TextInput placeholder="+971 50 000 0000" {...form.register("footer.contactPhone")} />
+              </Field>
+            </div>
+            <div className="grid md:grid-cols-2 gap-3">
+              <Field label="WhatsApp" hint="Number with country code">
+                <TextInput placeholder="+971500000000" {...form.register("footer.contactWhatsapp")} />
+              </Field>
+              <Field label="Location">
+                <TextInput placeholder="Dubai, UAE" {...form.register("footer.contactLocation")} />
+              </Field>
+            </div>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                {...form.register("footer.showDubaiTime")}
+                className="rounded border-gray-300 accent-black"
+              />
+              <span className="text-sm text-gray-600">Show Dubai local time in footer</span>
+            </label>
           </div>
         </div>
 

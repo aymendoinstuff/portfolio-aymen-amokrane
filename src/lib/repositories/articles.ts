@@ -1,28 +1,31 @@
 import { adminDb } from "@/lib/firebase/admin";
 import type { ArticleDoc } from "@/lib/types/article";
 
+// Sanitise Firestore Timestamp/special objects so they don't crash Next.js
+// serialisation when passed as props to "use client" components.
+function sanitise<T>(data: unknown): T {
+  return JSON.parse(JSON.stringify(data)) as T;
+}
+
 export async function repoGetPublishedArticles(
   limit = 50
 ): Promise<ArticleDoc[]> {
   try {
-    // Query by published only (no orderBy) to avoid requiring a composite index.
-    // Sort by createdAt descending in memory.
     const snap = await adminDb
       .collection("articles")
       .where("published", "==", true)
       .limit(limit)
       .get();
 
-    const docs = snap.docs.map((d) => ({ ...(d.data() as ArticleDoc), id: d.id }));
+    const docs = snap.docs.map((d) => sanitise<ArticleDoc>({ ...d.data(), id: d.id }));
     docs.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
     return docs;
   } catch (error) {
     console.error("[repoGetPublishedArticles] error:", error);
-    // Fallback: fetch all without filter and sort in memory
     try {
       const snap = await adminDb.collection("articles").limit(limit).get();
       const docs = snap.docs
-        .map((d) => ({ ...(d.data() as ArticleDoc), id: d.id }))
+        .map((d) => sanitise<ArticleDoc>({ ...d.data(), id: d.id }))
         .filter((d) => d.published);
       docs.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
       return docs;
@@ -36,7 +39,6 @@ export async function repoGetArticleBySlug(
   slug: string
 ): Promise<ArticleDoc | null> {
   try {
-    // Query by slug only, then filter published in memory — avoids composite index.
     const snap = await adminDb
       .collection("articles")
       .where("slug", "==", slug)
@@ -45,9 +47,9 @@ export async function repoGetArticleBySlug(
 
     if (snap.empty) return null;
     const d = snap.docs[0];
-    const data = d.data() as ArticleDoc;
+    const data = sanitise<ArticleDoc>({ ...d.data(), id: d.id });
     if (!data.published) return null;
-    return { ...data, id: d.id };
+    return data;
   } catch (error) {
     console.error("[repoGetArticleBySlug] error:", error);
     return null;

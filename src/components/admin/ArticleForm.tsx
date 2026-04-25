@@ -5,7 +5,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DropZone from "@/components/admin/ui/DropZone";
 import {
-  Plus, Trash2, ChevronUp, ChevronDown, Type, Quote,
+  Plus, Trash2, Type, Quote, GripVertical,
   Image as ImageIcon, Minus, AlignLeft, Eye, EyeOff,
   Save, ArrowLeft, Loader2, Hash, Tag, Bold, Italic,
 } from "lucide-react";
@@ -203,33 +203,39 @@ const BLOCK_TYPES: ArticleBlock["type"][] = ["paragraph", "h2", "h3", "quote", "
 // ─── Single block item ────────────────────────────────────────────────────────
 
 function BlockItem({
-  block, index, total, onUpdate, onRemove, onMove,
+  block, index, onUpdate, onRemove, dragProps, handleProps, isDragOver,
 }: {
   block: ArticleBlock;
   index: number;
-  total: number;
   onUpdate: (b: ArticleBlock) => void;
   onRemove: () => void;
-  onMove: (dir: -1 | 1) => void;
+  dragProps: {
+    draggable: true;
+    onDragStart: (e: React.DragEvent) => void;
+    onDragOver: (e: React.DragEvent) => void;
+    onDrop: (e: React.DragEvent) => void;
+    onDragEnd: () => void;
+  };
+  handleProps: { onPointerDown: () => void; style: React.CSSProperties };
+  isDragOver: boolean;
 }) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const isDivider = block.type === "divider";
 
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden hover:border-gray-300 transition-colors group">
+    <div
+      {...dragProps}
+      className={[
+        "rounded-xl border overflow-hidden transition-all select-none group",
+        isDragOver ? "border-black ring-2 ring-black/10 shadow-md" : "border-gray-200 hover:border-gray-300",
+      ].join(" ")}
+    >
       {/* Block header */}
       <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border-b border-gray-100">
+        <GripVertical size={13} className="text-gray-300 shrink-0 active:cursor-grabbing" {...handleProps} />
         <span className="text-gray-400">{BLOCK_ICONS[block.type]}</span>
         <span className="text-xs font-medium text-gray-500 flex-1">{BLOCK_LABELS[block.type]}</span>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button type="button" disabled={index === 0} onClick={() => onMove(-1)}
-            className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-black disabled:opacity-20 transition">
-            <ChevronUp size={13} />
-          </button>
-          <button type="button" disabled={index === total - 1} onClick={() => onMove(1)}
-            className="w-6 h-6 flex items-center justify-center rounded text-gray-400 hover:text-black disabled:opacity-20 transition">
-            <ChevronDown size={13} />
-          </button>
           <button type="button" onClick={onRemove}
             className="w-6 h-6 flex items-center justify-center rounded text-gray-300 hover:text-red-500 transition">
             <Trash2 size={12} />
@@ -475,11 +481,41 @@ export default function ArticleForm({
   const addBlock    = (type: ArticleBlock["type"]) => setBlocks((b) => [...b, newBlock(type)]);
   const updateBlock = useCallback((i: number, b: ArticleBlock) => setBlocks((prev) => prev.map((x, idx) => idx === i ? b : x)), []);
   const removeBlock = (i: number) => setBlocks((b) => b.filter((_, idx) => idx !== i));
-  const moveBlock   = (i: number, dir: -1 | 1) => setBlocks((b) => {
-    const a = [...b]; const j = i + dir;
-    if (j < 0 || j >= a.length) return a;
-    [a[i], a[j]] = [a[j], a[i]]; return a;
-  });
+
+  // Drag-to-reorder for blocks (handle-only)
+  const blockDragIdx    = useRef<number | null>(null);
+  const blockFromHandle = useRef(false);
+  const [blockDragOver, setBlockDragOver] = useState<number | null>(null);
+
+  const blockHandleProps = {
+    onPointerDown: () => { blockFromHandle.current = true; },
+    style: { cursor: "grab" } as React.CSSProperties,
+  };
+
+  function getBlockDragProps(i: number) {
+    return {
+      draggable: true as const,
+      onDragStart: (e: React.DragEvent) => {
+        if (!blockFromHandle.current) { e.preventDefault(); return; }
+        blockDragIdx.current = i; e.dataTransfer.effectAllowed = "move";
+      },
+      onDragOver:  (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setBlockDragOver(i); },
+      onDrop:      (e: React.DragEvent) => {
+        e.preventDefault();
+        const from = blockDragIdx.current;
+        if (from != null && from !== i) {
+          setBlocks((b) => {
+            const a = [...b];
+            const [moved] = a.splice(from, 1);
+            a.splice(i, 0, moved);
+            return a;
+          });
+        }
+        blockDragIdx.current = null; setBlockDragOver(null);
+      },
+      onDragEnd:   () => { blockFromHandle.current = false; blockDragIdx.current = null; setBlockDragOver(null); },
+    };
+  }
 
   const handleSave = async () => {
     if (!title.trim()) { setError("Title is required."); return; }
@@ -584,10 +620,12 @@ export default function ArticleForm({
                   </div>
                 )}
                 {blocks.map((block, i) => (
-                  <BlockItem key={i} block={block} index={i} total={blocks.length}
+                  <BlockItem key={i} block={block} index={i}
                     onUpdate={(b) => updateBlock(i, b)}
                     onRemove={() => removeBlock(i)}
-                    onMove={(dir) => moveBlock(i, dir)} />
+                    dragProps={getBlockDragProps(i)}
+                    handleProps={blockHandleProps}
+                    isDragOver={blockDragOver === i} />
                 ))}
                 <AddBlockMenu onAdd={addBlock} />
               </div>

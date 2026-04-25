@@ -1,59 +1,64 @@
 import { GridRowWide } from "./GridRowWide";
 import { GridRowTwoUp } from "./GridRowTwoUp";
-import { GridRowFeature } from "./GridRowFeature";
 import type { Project } from "@/lib/types/project";
 import { isProject } from "@/lib/utils/typeguards";
 
 export type ProjectsGridProps = Readonly<{ projects: Project[] }>;
 
-type RowType = "WIDE" | "TWO_UP" | "FEATURE";
-type Row = { type: RowType; items: Project[]; key: string };
-
 const pid = (p: Project) => p.general.id ?? p.general.slug ?? String(p.general?.title);
 
-const rowKey = (type: RowType, items: Project[]) =>
-  `${type}__${items.map((p) => pid(p)).join("__")}`;
-
+/**
+ * Layout algorithm — alternates WIDE and TWO_UP:
+ *   cycle_pos 0 → WIDE (1 project, full width)
+ *   cycle_pos 1 → TWO_UP if ≥2 remain, else WIDE (1 leftover)
+ *
+ * Examples:
+ *   3 → WIDE, TWO_UP
+ *   4 → WIDE, TWO_UP, WIDE
+ *   5 → WIDE, TWO_UP, WIDE, WIDE
+ *   6 → WIDE, TWO_UP, WIDE, TWO_UP
+ */
 export function ProjectsGrid({ projects }: ProjectsGridProps) {
-  const order: RowType[] = ["WIDE", "TWO_UP", "FEATURE"]; // visual rhythm
-  const rows: Row[] = [];
+  const valid = projects.filter(isProject);
+  if (valid.length === 0) return null;
 
+  const rows: React.ReactNode[] = [];
   let i = 0;
-  let t = 0;
-  while (i < projects.length) {
-    const type = order[t % order.length];
+  let cyclePos = 0; // 0 = wide slot, 1 = two-up slot
 
-    if (type === "WIDE") {
-      const items = [projects[i]].filter(isProject);
-      if (items.length) {
-        rows.push({ type, items, key: rowKey(type, items) });
-      }
+  while (i < valid.length) {
+    const remaining = valid.length - i;
+
+    if (cyclePos === 0) {
+      // Always show a full-width single
+      const p = valid[i];
+      rows.push(
+        <GridRowWide key={`wide-${pid(p)}`} a={p} priority={rows.length === 0} />
+      );
       i += 1;
+      cyclePos = 1;
     } else {
-      const items = [projects[i], projects[i + 1]].filter(isProject);
-      if (items.length) {
-        rows.push({ type, items, key: rowKey(type, items) });
+      // Two-up if 2+ remain, else fall back to single wide
+      if (remaining >= 2) {
+        const items = [valid[i], valid[i + 1]];
+        rows.push(
+          <GridRowTwoUp
+            key={`twoup-${items.map(pid).join("__")}`}
+            items={items}
+            priority={false}
+          />
+        );
+        i += 2;
+      } else {
+        const p = valid[i];
+        rows.push(
+          <GridRowWide key={`wide-tail-${pid(p)}`} a={p} priority={false} />
+        );
+        i += 1;
       }
-      i += 2;
+      cyclePos = 0;
     }
-    t++;
   }
 
-  return (
-    <div>
-      {rows.map((row, rowIndex) => {
-        const isFirst = rowIndex === 0;
-        switch (row.type) {
-          case "WIDE":
-            // key is derived from the project's identity, not the index
-            return <GridRowWide key={row.key} a={row.items[0]} priority={isFirst} />;
-          case "TWO_UP":
-            return <GridRowTwoUp key={row.key} items={row.items} priority={isFirst} />;
-          case "FEATURE":
-          default:
-            return <GridRowFeature key={row.key} items={row.items} />;
-        }
-      })}
-    </div>
-  );
+  return <div className="flex flex-col gap-2">{rows}</div>;
 }

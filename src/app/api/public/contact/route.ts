@@ -1,4 +1,5 @@
 import { OfferCreateInput, repoCreateOffer, repoListOffers } from "@/lib/repositories/contact";
+import { sendNotification } from "@/lib/email/notify";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -48,7 +49,8 @@ export async function POST(req: Request) {
     }
     
     const id = await repoCreateOffer(parsed.data as OfferCreateInput);
-    console.log(id)
+    // Send email notification to admin
+    await sendNotification(parsed.data as Record<string, unknown>, "inquiry");
     return NextResponse.json({ id, status: "ok" }, { status: 201 });
   } catch (err) {
     console.error("[POST /api/contact] error:", err);

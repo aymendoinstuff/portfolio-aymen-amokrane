@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Minus, ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Plus, Minus, CheckCircle2, ArrowRight } from "lucide-react";
 import type { SiteSettings } from "@/app/admin/settings/schema";
 import { BookingModal, type BookingType } from "./BookingModal";
 import AvailabilityWidget from "./AvailabilityWidget";
@@ -19,255 +19,309 @@ const BTN_PRIMARY_FULL =
 const BTN_OUTLINE =
   "inline-flex items-center justify-center gap-2 px-6 py-3 border border-gray-900 text-gray-900 rounded-full text-sm font-semibold hover:bg-gray-900 hover:text-white transition-colors";
 
-// ─── Wishlist — folder system ─────────────────────────────────────────────────
+// ─── Wishlist ─────────────────────────────────────────────────────────────────
+
+const GOLD_BORDER = "border-[#E8D5A3]";
+const GOLD_TEXT   = "text-[#9A7A2E]";
+const GOLD_LIGHT  = "#FDF6E3";
+const GOLD_MID    = "#F0DFB0";
 
 function WishlistSection({
   title,
   subtitle,
   projects,
+  locked,
   onBook,
 }: {
   title: string;
   subtitle?: string;
   projects: SiteSettings["contact"]["wishlistProjects"];
+  locked?: boolean;
   onBook: (b: BookingType) => void;
 }) {
   const visible = projects.filter((p) => p.visible);
-  if (visible.length === 0) return null;
+  const [discovered, setDiscovered] = useState(false);
+  // Accordion: only one card open at a time
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const [opened, setOpened] = useState(false);
-  const [activeIdx, setActiveIdx] = useState(0);
-  const active = visible[activeIdx] ?? visible[0];
-
+  const openCount      = visible.filter((p) => !p.fulfilled).length;
   const fulfilledCount = visible.filter((p) => p.fulfilled).length;
-  const wishStat =
-    fulfilledCount === 0
-      ? `${visible.length} open invitations`
-      : fulfilledCount === visible.length
-      ? "All wishes granted — new ones coming soon"
-      : `${fulfilledCount} of ${visible.length} wishes granted this year`;
+
+  const hasProjects = !locked && visible.length > 0;
+
+  function toggleCard(id: string) {
+    setExpandedId((prev) => (prev === id ? null : id));
+  }
 
   return (
-    <section className="max-w-6xl mx-auto px-4 md:px-6 py-10 md:py-14">
-      {/* 2-column: availability (left) + wishlist folder (right) */}
-      <div className="grid md:grid-cols-[280px_1fr] gap-6 items-stretch">
+    <section className="max-w-6xl mx-auto px-4 md:px-6 py-10 md:py-16">
+      <div className="grid md:grid-cols-[3fr_2fr] gap-6 items-start">
 
-        {/* ── LEFT: Availability widget (desktop only) ── */}
-        <div className="hidden md:flex flex-col">
-          <div className="border border-gray-200 rounded-3xl p-6 bg-white flex-1 flex flex-col">
-            <AvailabilityWidget />
-          </div>
-        </div>
-
-        {/* ── RIGHT: Wishlist folder ── */}
-        <div className="min-w-0 flex flex-col">
+        {/* ── Single golden card ── */}
+        <div
+          className={`rounded-3xl border ${GOLD_BORDER} overflow-hidden`}
+          style={{ background: `linear-gradient(160deg, ${GOLD_LIGHT} 0%, ${GOLD_MID} 100%)` }}
+        >
           <AnimatePresence mode="wait" initial={false}>
-            {!opened ? (
-              /* ── COVER STATE ── */
+
+            {/* ── COVER: locked or pre-discover ── */}
+            {(!hasProjects || !discovered) && (
               <motion.div
                 key="cover"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25 }}
-                className="flex-1 flex flex-col"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col items-center text-center px-8 py-8 gap-3"
               >
+                {/* Seal */}
                 <div
-                  className="flex-1 flex flex-col rounded-3xl border border-[#E8D5A3] overflow-hidden"
-                  style={{ background: "linear-gradient(135deg, #FDF6E3 0%, #F9EDCA 100%)" }}
+                  className="w-10 h-10 rounded-full border-2 flex items-center justify-center shrink-0"
+                  style={{ borderColor: "#E8D5A3", background: "#F0DFB0" }}
                 >
-                  {/* Decorative folder tabs */}
-                  <div className="flex gap-0 px-8 pt-7 pointer-events-none select-none overflow-x-hidden">
-                    {visible.map((p, i) => (
-                      <div
-                        key={p.id}
-                        title={p.title}
-                        className="px-4 py-2 rounded-t-xl text-[10px] font-bold uppercase tracking-widest border border-b-0 mr-1 truncate max-w-[110px]"
-                        style={{
-                          background: i === 0 ? "#FDF6E3" : `rgba(200,168,90,${0.15 + i * 0.08})`,
-                          borderColor: "#E8D5A3",
-                          color: i === 0 ? "#8B6914" : "#C8A85A",
-                          opacity: 1 - i * 0.15,
-                          transform: `translateY(${i * 2}px)`,
-                          zIndex: visible.length - i,
-                        }}
-                      >
-                        {p.title}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Cover body */}
-                  <div className="border-t border-[#E8D5A3] px-8 py-10 flex-1 flex flex-col justify-between gap-8">
-                    <div>
-                      <h2 className="text-4xl md:text-5xl tracking-tight leading-[0.95] text-gray-900 mb-4">
-                        {title}
-                      </h2>
-                      <p className="text-gray-600 text-sm leading-relaxed max-w-[280px]">
-                        {subtitle ||
-                          "Dream projects I'm actively seeking in 2026 — open invitations for founders ready to build something worth flying for."}
-                      </p>
-                      <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C8A85A]">
-                        {wishStat}
-                      </p>
-                    </div>
-
-                    <div>
-                      <button
-                        onClick={() => { setOpened(true); setActiveIdx(0); }}
-                        className={BTN_PRIMARY}
-                      >
-                        View Projects
-                        <ChevronRight size={14} />
-                      </button>
-                    </div>
-                  </div>
+                  <svg viewBox="0 0 32 32" className="w-5 h-5" fill="none">
+                    <path d="M16 3l2.5 8.5H27l-7 5 2.5 8.5L16 20l-6.5 5L12 16.5l-7-5h8.5L16 3z" fill="#C8A85A" opacity="0.85"/>
+                  </svg>
                 </div>
 
-                {/* Mobile availability widget */}
-                <div className="md:hidden mt-4">
-                  <div className="border border-gray-200 rounded-3xl p-6 bg-white">
-                    <AvailabilityWidget />
-                  </div>
-                </div>
+                {/* Label — acts as the main title */}
+                <h2 className="text-2xl md:text-3xl font-bold uppercase tracking-[0.05em] leading-none" style={{ color: "#9A7A2E" }}>
+                  ✦ {new Date().getFullYear()} Wishlist
+                </h2>
+
+                {/* Subtitle / teaser */}
+                <p className="text-sm leading-relaxed max-w-xs" style={{ color: "#7A6030" }}>
+                  {subtitle || (locked
+                    ? "Something worth waiting for — check back soon."
+                    : "Dream projects I'm actively seeking. Open invitations for founders ready to build something worth flying for."
+                  )}
+                </p>
+
+                {locked ? (
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em]" style={{ color: "#C8A85A" }}>
+                    Unveiling soon
+                  </p>
+                ) : (
+                  <button
+                    onClick={() => setDiscovered(true)}
+                    className="inline-flex items-center gap-2 px-6 py-2 rounded-full text-sm font-semibold transition-all"
+                    style={{ background: "#C8A85A", color: "#fff" }}
+                    onMouseEnter={(e) => { (e.currentTarget).style.background = "#9A7A2E"; }}
+                    onMouseLeave={(e) => { (e.currentTarget).style.background = "#C8A85A"; }}
+                  >
+                    Discover ✦
+                  </button>
+                )}
               </motion.div>
-            ) : (
-              /* ── OPEN FOLDER STATE ── */
+            )}
+
+            {/* ── EXPANDED: title top-left, accordion rows ── */}
+            {hasProjects && discovered && (
               <motion.div
                 key="open"
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25 }}
-                className="flex-1 flex flex-col"
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               >
-                {/* Folder tabs row */}
-                <div className="flex items-end gap-1 px-1 overflow-x-auto shrink-0">
-                  {visible.map((project, i) => (
+                {/* Compact header */}
+                <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b" style={{ borderColor: "#E8D5A3" }}>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] mb-0.5" style={{ color: "#9A7A2E" }}>
+                      ✦ {new Date().getFullYear()} Wishlist
+                    </p>
+                    <h2 className="text-lg md:text-xl tracking-tight leading-tight text-gray-900">{title}</h2>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <p className="hidden sm:block text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: "#C8A85A" }}>
+                      {openCount > 0
+                        ? `${openCount} open${fulfilledCount > 0 ? ` · ${fulfilledCount} granted` : ""}`
+                        : "All granted"
+                      }
+                    </p>
                     <button
-                      key={project.id}
-                      type="button"
-                      onClick={() => setActiveIdx(i)}
-                      className={[
-                        "relative px-4 py-2.5 rounded-t-2xl text-sm font-semibold tracking-tight transition-all border border-b-0 whitespace-nowrap shrink-0",
-                        i === activeIdx
-                          ? "bg-[#FDF6E3] border-[#E8D5A3] text-gray-900 z-10 -mb-px pb-[13px]"
-                          : "bg-[#F0DFB0] border-[#D4BC80] text-[#A07840] hover:bg-[#F5E8C0] hover:text-gray-800 z-0",
-                      ].join(" ")}
-                      style={{ transform: i === activeIdx ? "none" : `translateY(${(i % 2) * 2}px)` }}
+                      onClick={() => { setDiscovered(false); setExpandedId(null); }}
+                      className="text-xs font-medium transition-colors"
+                      style={{ color: "#C8A85A" }}
+                      onMouseEnter={(e) => { (e.currentTarget).style.color = "#9A7A2E"; }}
+                      onMouseLeave={(e) => { (e.currentTarget).style.color = "#C8A85A"; }}
                     >
-                      {project.title}
-                      {project.fulfilled && (
-                        <CheckCircle2 size={10} className="inline ml-1.5 opacity-70" />
-                      )}
+                      ← Back
                     </button>
-                  ))}
-
-                  <button
-                    onClick={() => setOpened(false)}
-                    className="ml-auto text-xs text-[#C8A85A] hover:text-[#8B6914] font-medium transition-colors pb-2 pr-1 shrink-0"
-                  >
-                    ← Back
-                  </button>
+                  </div>
                 </div>
 
-                {/* Folder content */}
-                <div
-                  className="flex-1 rounded-b-3xl rounded-tr-3xl border border-[#E8D5A3]"
-                  style={{ background: "#FDF6E3" }}
-                >
-                  <AnimatePresence mode="wait" initial={false}>
-                    <motion.div
-                      key={active.id}
-                      initial={{ opacity: 0, x: 12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: -12 }}
-                      transition={{ duration: 0.18, ease: "easeOut" }}
-                      className="p-8 h-full grid md:grid-cols-[1fr_180px] gap-8"
-                    >
-                      {/* Left: content */}
-                      <div className="space-y-5">
-                        <div>
-                          <h3 className="text-3xl md:text-4xl font-black tracking-tight text-gray-900 leading-tight">
-                            {active.title}
-                          </h3>
-                          {active.subtitle && (
-                            <p className="text-sm text-[#A07840] mt-1.5 font-medium">{active.subtitle}</p>
-                          )}
-                        </div>
-
-                        {active.brief && (
-                          <p className="text-sm text-gray-700 leading-relaxed">{active.brief}</p>
-                        )}
-
-                        {active.criteria?.length > 0 && (
-                          <div>
-                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A07840] mb-3">
-                              Who this is for
-                            </p>
-                            <ul className="space-y-2">
-                              {active.criteria.map((c, i) => (
-                                <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700">
-                                  <span className="mt-0.5 w-4 h-4 shrink-0 rounded-full border border-[#C8A85A] flex items-center justify-center text-[9px] font-bold text-[#A07840]">
-                                    {i + 1}
-                                  </span>
-                                  {c}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right: nav + CTA */}
-                      <div className="flex flex-col justify-between gap-4">
-                        {/* Pagination */}
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setActiveIdx(Math.max(0, activeIdx - 1))}
-                            disabled={activeIdx === 0}
-                            className="w-8 h-8 rounded-full border border-[#D4BC80] flex items-center justify-center text-[#A07840] hover:bg-[#F0DFB0] disabled:opacity-30 transition"
-                          >
-                            <ChevronLeft size={13} />
-                          </button>
-                          <span className="text-xs font-semibold text-[#C8A85A] flex-1 text-center tabular-nums">
-                            {activeIdx + 1} / {visible.length}
-                          </span>
-                          <button
-                            onClick={() => setActiveIdx(Math.min(visible.length - 1, activeIdx + 1))}
-                            disabled={activeIdx === visible.length - 1}
-                            className="w-8 h-8 rounded-full border border-[#D4BC80] flex items-center justify-center text-[#A07840] hover:bg-[#F0DFB0] disabled:opacity-30 transition"
-                          >
-                            <ChevronRight size={13} />
-                          </button>
-                        </div>
-
-                        {/* CTA */}
-                        <div className="mt-auto">
-                          {active.fulfilled ? (
-                            <div className="flex items-center gap-2 text-sm text-[#A07840] font-semibold">
-                              <CheckCircle2 size={15} />
-                              Wish Granted
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => onBook({ kind: "wishlist", projectTitle: active.title })}
-                              className={BTN_PRIMARY_FULL}
-                            >
-                              Book Now
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  </AnimatePresence>
+                {/* Accordion rows — others hide when one is open */}
+                <div>
+                  {visible.map((project, i) => (
+                    <AnimatePresence key={project.id} initial={false}>
+                      {(expandedId === null || expandedId === project.id) && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                          className="overflow-hidden border-b last:border-0"
+                          style={{ borderColor: "#E8D5A3" }}
+                        >
+                          <WishlistCard
+                            project={project}
+                            index={i}
+                            expanded={expandedId === project.id}
+                            onToggle={() => toggleCard(project.id)}
+                            onBook={onBook}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  ))}
                 </div>
               </motion.div>
             )}
+
           </AnimatePresence>
+        </div>
+
+        {/* ── Availability — always visible ── */}
+        <div className="hidden md:block sticky top-24">
+          <div className="border border-gray-200 rounded-3xl p-6 bg-white">
+            <AvailabilityWidget />
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile availability — always visible */}
+      <div className="md:hidden mt-6">
+        <div className="border border-gray-200 rounded-3xl p-6 bg-white">
+          <AvailabilityWidget />
         </div>
       </div>
     </section>
+  );
+}
+
+function WishlistCard({
+  project,
+  index,
+  expanded,
+  onToggle,
+  onBook,
+}: {
+  project: SiteSettings["contact"]["wishlistProjects"][number];
+  index: number;
+  expanded: boolean;
+  onToggle: () => void;
+  onBook: (b: BookingType) => void;
+}) {
+  return (
+    <div className="group">
+      {/* Row header */}
+      <div
+        className="flex items-center gap-4 px-6 py-4 cursor-pointer"
+        onClick={onToggle}
+      >
+        {/* Golden index */}
+        <span
+          className="shrink-0 text-xs font-bold tabular-nums w-5 text-right select-none"
+          style={{ color: "#C8A85A" }}
+        >
+          {String(index + 1).padStart(2, "0")}
+        </span>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-base md:text-lg tracking-tight leading-snug text-gray-900 group-hover:underline underline-offset-4 decoration-1 truncate">
+                {project.title}
+              </h3>
+              {project.subtitle && (
+                <p className="text-xs mt-0.5 truncate" style={{ color: "#9A7A2E" }}>{project.subtitle}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {project.fulfilled ? (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{ background: "#E8F5E9", color: "#388E3C", border: "1px solid #A5D6A7" }}>
+                  <CheckCircle2 size={9} /> Granted
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{ background: "#FDF6E3", color: "#C8A85A", border: "1px solid #E8D5A3" }}>
+                  Open
+                </span>
+              )}
+              <span
+                className="transition-transform duration-200 shrink-0"
+                style={{ color: "#C8A85A", transform: expanded ? "rotate(45deg)" : "none", display: "block" }}
+              >
+                <Plus size={14} />
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Expandable detail */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            key="detail"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
+          >
+            <div
+              className="mx-4 mb-4 rounded-2xl px-5 py-4 space-y-4"
+              style={{ background: "#F5E8C0", border: "1px solid #E8D5A3" }}
+            >
+              {project.brief && (
+                <p className="text-sm leading-relaxed" style={{ color: "#5C4A1E" }}>
+                  {project.brief}
+                </p>
+              )}
+
+              {project.criteria?.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2" style={{ color: "#9A7A2E" }}>
+                    Who this is for
+                  </p>
+                  <ul className="space-y-1.5">
+                    {project.criteria.map((c, ci) => (
+                      <li key={ci} className="flex items-start gap-2.5 text-sm" style={{ color: "#5C4A1E" }}>
+                        <span
+                          className="mt-0.5 w-4 h-4 shrink-0 rounded-full flex items-center justify-center text-[9px] font-bold"
+                          style={{ background: "#E8D5A3", color: "#9A7A2E" }}
+                        >
+                          {ci + 1}
+                        </span>
+                        {c}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {!project.fulfilled && (
+                <div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onBook({ kind: "wishlist", projectTitle: project.title }); }}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors"
+                    style={{ background: "#C8A85A", color: "#fff" }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#9A7A2E"; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#C8A85A"; }}
+                  >
+                    Apply for this project
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
@@ -330,26 +384,21 @@ function ServiceCard({
       <button
         type="button"
         onClick={onToggle}
-        className="flex items-start justify-between gap-2 px-5 pt-5 pb-3 text-left w-full"
+        className={[
+          "flex items-start justify-between gap-2 px-5 text-left w-full",
+          expanded ? "pt-5 pb-3" : "flex-1 pt-5 pb-5",
+        ].join(" ")}
       >
-        <div>
-          <h3 className="text-base font-black tracking-tight leading-tight uppercase">{service.title}</h3>
+        <div className="flex flex-col justify-center">
+          <h3 className="text-2xl md:text-3xl font-black tracking-tight leading-[1] uppercase">{service.title}</h3>
           {service.subtitle && (
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mt-1">{service.subtitle}</p>
+            <p className="text-xs text-gray-400 mt-1.5 leading-snug">{service.subtitle}</p>
           )}
         </div>
         <span className="shrink-0 w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center mt-0.5">
           {expanded ? <Minus size={11} /> : <Plus size={11} />}
         </span>
       </button>
-
-      {/* Collapsed: show starting price */}
-      {!expanded && service.pricing?.length > 0 && (
-        <div className="flex-1 flex flex-col justify-end px-5 pb-5">
-          <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide mb-0.5">From</p>
-          <p className="text-sm font-black text-gray-800">{service.pricing[0]?.price}</p>
-        </div>
-      )}
 
       {/* Expanded content */}
       <AnimatePresence initial={false}>
@@ -403,7 +452,7 @@ function ServiceCard({
 // ─── General Inquiry — full-width card with form ─────────────────────────────
 
 function InquirySection({ title }: { title: string }) {
-  const [fields, setFields] = useState({ name: "", email: "", subject: "", message: "" });
+  const [fields, setFields] = useState({ name: "", email: "", role: "", subject: "", message: "" });
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
   function set(k: string, v: string) {
@@ -428,6 +477,8 @@ function InquirySection({ title }: { title: string }) {
 
   const inputCls =
     "w-full border border-gray-200 rounded-xl px-4 h-11 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition placeholder:text-gray-300 bg-white";
+  const selectCls =
+    "w-full border border-gray-200 rounded-xl px-4 h-11 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition bg-white appearance-none cursor-pointer text-gray-700";
   const textareaCls =
     "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-black focus:ring-1 focus:ring-black transition placeholder:text-gray-300 resize-none bg-white";
 
@@ -460,7 +511,7 @@ function InquirySection({ title }: { title: string }) {
                 <p className="text-2xl font-black tracking-tight">Message received.</p>
                 <p className="text-gray-500 text-sm">I&apos;ll get back to you as soon as I can.</p>
                 <button
-                  onClick={() => { setStatus("idle"); setFields({ name: "", email: "", subject: "", message: "" }); }}
+                  onClick={() => { setStatus("idle"); setFields({ name: "", email: "", role: "", subject: "", message: "" }); }}
                   className="mt-1 text-sm text-gray-400 hover:text-black underline underline-offset-4 transition w-fit"
                 >
                   Send another
@@ -479,8 +530,24 @@ function InquirySection({ title }: { title: string }) {
                   </div>
                 </div>
                 <div>
+                  <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-[0.12em] mb-1.5">Who are you?</label>
+                  <div className="relative">
+                    <select className={selectCls} value={fields.role} onChange={(e) => set("role", e.target.value)}>
+                      <option value="">Select one…</option>
+                      <option value="Creative">Creative</option>
+                      <option value="Business Owner">Business Owner</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-400">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+                <div>
                   <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-[0.12em] mb-1.5">Subject</label>
-                  <input className={inputCls} placeholder="What&apos;s on your mind?" value={fields.subject} onChange={(e) => set("subject", e.target.value)} />
+                  <input className={inputCls} placeholder="What's on your mind?" value={fields.subject} onChange={(e) => set("subject", e.target.value)} />
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-[0.12em] mb-1.5">Message *</label>
@@ -511,7 +578,8 @@ export default function ContactClient({
   contact: SiteSettings["contact"];
 }) {
   const [booking, setBooking] = useState<BookingType | null>(null);
-  const sortedSections = [...(contact.sections ?? [])].sort((a, b) => a.order - b.order);
+  // Array order from Firestore already reflects the admin drag order — no sort needed
+  const sortedSections = contact.sections ?? [];
 
   function renderSection(id: string) {
     const section = contact.sections.find((s) => s.id === id);
@@ -525,6 +593,7 @@ export default function ContactClient({
             title={contact.wishlistTitle}
             subtitle={contact.wishlistSubtitle}
             projects={contact.wishlistProjects}
+            locked={contact.wishlistLocked}
             onBook={setBooking}
           />
         );

@@ -5,9 +5,50 @@ import { useFieldArray, useWatch } from "react-hook-form";
 import type { SiteSettings } from "../schema";
 import { TextInput, Textarea, Button, Checkbox } from "../ui/Inputs";
 import {
-  Plus, Trash2, ChevronUp, ChevronDown,
+  Plus, Trash2,
   Eye, EyeOff, GripVertical,
 } from "lucide-react";
+
+// ─── Drag-to-reorder hook ─────────────────────────────────────────────────────
+
+type DragItemProps = {
+  draggable: true;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragOver:  (e: React.DragEvent) => void;
+  onDrop:      (e: React.DragEvent) => void;
+  onDragEnd:   () => void;
+};
+
+function useDragList(onMove: (from: number, to: number) => void) {
+  const dragIdx     = React.useRef<number | null>(null);
+  const fromHandle  = React.useRef(false);
+  const [dragOver, setDragOver] = React.useState<number | null>(null);
+
+  // Spread these onto the GripVertical handle element
+  const handleProps = {
+    onPointerDown: () => { fromHandle.current = true; },
+    style: { cursor: "grab" } as React.CSSProperties,
+  };
+
+  function getProps(i: number): DragItemProps {
+    return {
+      draggable: true,
+      onDragStart: (e) => {
+        if (!fromHandle.current) { e.preventDefault(); return; }
+        dragIdx.current = i; e.dataTransfer.effectAllowed = "move";
+      },
+      onDragOver:  (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOver(i); },
+      onDrop:      (e) => {
+        e.preventDefault();
+        const from = dragIdx.current;
+        if (from != null && from !== i) onMove(from, i);
+        dragIdx.current = null; setDragOver(null);
+      },
+      onDragEnd:   () => { fromHandle.current = false; dragIdx.current = null; setDragOver(null); },
+    };
+  }
+  return { getProps, handleProps, dragOver };
+}
 
 // ─── Shared Card ─────────────────────────────────────────────────────────────
 
@@ -169,13 +210,13 @@ export const DEFAULT_SERVICES = [
 // ─── Wishlist Row ─────────────────────────────────────────────────────────────
 
 function WishlistRow({
-  index, total, form, onMoveUp, onMoveDown, onRemove,
+  index, form, dragProps, handleProps, isDragOver, onRemove,
 }: {
   index: number;
-  total: number;
   form: UseFormReturn<SiteSettings>;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  dragProps: DragItemProps;
+  handleProps: { onPointerDown: () => void; style: React.CSSProperties };
+  isDragOver: boolean;
   onRemove: () => void;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -185,21 +226,21 @@ function WishlistRow({
   const criteria = useFieldArray({ control: form.control, name: `contact.wishlistProjects.${index}.criteria` as never });
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div
+      {...dragProps}
+      className={[
+        "border rounded-xl overflow-hidden transition-all select-none",
+        isDragOver ? "border-black ring-2 ring-black/10 shadow-md" : "border-gray-200",
+      ].join(" ")}
+    >
       {/* Row header */}
       <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 cursor-pointer" onClick={() => setOpen(v => !v)}>
-        <GripVertical size={14} className="text-gray-300 shrink-0" />
+        <GripVertical size={14} className="text-gray-300 shrink-0 active:cursor-grabbing" {...handleProps} onClick={e => e.stopPropagation()} />
         <span className="flex-1 text-sm font-semibold text-gray-800 truncate">{title || `Project ${index + 1}`}</span>
         {fulfilled && (
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold">Fulfilled</span>
         )}
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          <button type="button" disabled={index === 0} onClick={onMoveUp} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
-            <ChevronUp size={13} />
-          </button>
-          <button type="button" disabled={index === total - 1} onClick={onMoveDown} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
-            <ChevronDown size={13} />
-          </button>
           <button type="button" onClick={onRemove} className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500">
             <Trash2 size={13} />
           </button>
@@ -269,13 +310,13 @@ function WishlistRow({
 // ─── Service Row ─────────────────────────────────────────────────────────────
 
 function ServiceRow({
-  index, total, form, onMoveUp, onMoveDown, onRemove,
+  index, form, dragProps, handleProps, isDragOver, onRemove,
 }: {
   index: number;
-  total: number;
   form: UseFormReturn<SiteSettings>;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  dragProps: DragItemProps;
+  handleProps: { onPointerDown: () => void; style: React.CSSProperties };
+  isDragOver: boolean;
   onRemove: () => void;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -284,17 +325,17 @@ function ServiceRow({
   const pricing = useFieldArray({ control: form.control, name: `contact.services.${index}.pricing` as never });
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div
+      {...dragProps}
+      className={[
+        "border rounded-xl overflow-hidden transition-all select-none",
+        isDragOver ? "border-black ring-2 ring-black/10 shadow-md" : "border-gray-200",
+      ].join(" ")}
+    >
       <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 cursor-pointer" onClick={() => setOpen(v => !v)}>
-        <GripVertical size={14} className="text-gray-300 shrink-0" />
+        <GripVertical size={14} className="text-gray-300 shrink-0 active:cursor-grabbing" {...handleProps} onClick={e => e.stopPropagation()} />
         <span className="flex-1 text-sm font-semibold text-gray-800 truncate">{title || `Service ${index + 1}`}</span>
         <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          <button type="button" disabled={index === 0} onClick={onMoveUp} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
-            <ChevronUp size={13} />
-          </button>
-          <button type="button" disabled={index === total - 1} onClick={onMoveDown} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
-            <ChevronDown size={13} />
-          </button>
           <button type="button" onClick={onRemove} className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500">
             <Trash2 size={13} />
           </button>
@@ -365,31 +406,29 @@ const CONTACT_SECTION_LABELS: Record<string, string> = {
 };
 
 function ContactSectionRow({
-  index, total, form, onMoveUp, onMoveDown,
+  index, form, dragProps, handleProps, isDragOver,
 }: {
   index: number;
-  total: number;
   form: UseFormReturn<SiteSettings>;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  dragProps: DragItemProps;
+  handleProps: { onPointerDown: () => void; style: React.CSSProperties };
+  isDragOver: boolean;
 }) {
   const watchedId      = useWatch({ control: form.control, name: `contact.sections.${index}.id`      as const });
   const watchedVisible = useWatch({ control: form.control, name: `contact.sections.${index}.visible` as const });
 
   return (
-    <div className="flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-xl bg-gray-50">
-      <GripVertical size={14} className="text-gray-300" />
+    <div
+      {...dragProps}
+      className={[
+        "flex items-center gap-3 px-4 py-3 border rounded-xl bg-gray-50 transition-all select-none",
+        isDragOver ? "border-black ring-2 ring-black/10 shadow-md" : "border-gray-200",
+      ].join(" ")}
+    >
+      <GripVertical size={14} className="text-gray-300 active:cursor-grabbing shrink-0" {...handleProps} />
       <span className="flex-1 text-sm font-medium text-gray-700">
         {CONTACT_SECTION_LABELS[watchedId as string] ?? watchedId}
       </span>
-      <div className="flex items-center gap-1">
-        <button type="button" disabled={index === 0} onClick={onMoveUp} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
-          <ChevronUp size={13} />
-        </button>
-        <button type="button" disabled={index >= total - 1} onClick={onMoveDown} className="p-1 rounded hover:bg-gray-200 disabled:opacity-30">
-          <ChevronDown size={13} />
-        </button>
-      </div>
       <button
         type="button"
         onClick={() => form.setValue(`contact.sections.${index}.visible`, !watchedVisible)}
@@ -408,37 +447,22 @@ export function ContactTab({ form }: { form: UseFormReturn<SiteSettings> }) {
   const services = useFieldArray({ control: form.control, name: "contact.services" });
   const sections = useFieldArray({ control: form.control, name: "contact.sections" });
 
-  function moveSectionUp(i: number) {
-    if (i === 0) return;
+  const wishlistDrag = useDragList((from, to) => wishlist.move(from, to));
+  const servicesDrag = useDragList((from, to) => services.move(from, to));
+  const sectionsDrag = useDragList((from, to) => {
     sections.fields.forEach((_, idx) => form.setValue(`contact.sections.${idx}.order`, idx));
-    sections.swap(i, i - 1);
-  }
-  function moveSectionDown(i: number) {
-    if (i >= sections.fields.length - 1) return;
-    sections.fields.forEach((_, idx) => form.setValue(`contact.sections.${idx}.order`, idx));
-    sections.swap(i, i + 1);
-  }
-
-  function moveWishlistUp(i: number) {
-    if (i === 0) return;
-    wishlist.swap(i, i - 1);
-  }
-  function moveWishlistDown(i: number) {
-    if (i >= wishlist.fields.length - 1) return;
-    wishlist.swap(i, i + 1);
-  }
-
-  function moveServiceUp(i: number) {
-    if (i === 0) return;
-    services.swap(i, i - 1);
-  }
-  function moveServiceDown(i: number) {
-    if (i >= services.fields.length - 1) return;
-    services.swap(i, i + 1);
-  }
+    sections.move(from, to);
+  });
 
   return (
     <div className="space-y-6">
+
+      {/* ── Page Title ── */}
+      <SectionCard title="Page Heading">
+        <Field label="Page title" hint='Shown at the top of the contact page'>
+          <TextInput placeholder="Let's Do Stuff" {...form.register("contact.pageTitle")} />
+        </Field>
+      </SectionCard>
 
       {/* ── Section Visibility & Order ── */}
       <SectionCard title="Page Sections" hint="Toggle visibility and reorder sections on the contact page">
@@ -447,12 +471,47 @@ export function ContactTab({ form }: { form: UseFormReturn<SiteSettings> }) {
             <ContactSectionRow
               key={field.id}
               index={i}
-              total={sections.fields.length}
               form={form}
-              onMoveUp={() => moveSectionUp(i)}
-              onMoveDown={() => moveSectionDown(i)}
+              dragProps={sectionsDrag.getProps(i)}
+              handleProps={sectionsDrag.handleProps}
+              isDragOver={sectionsDrag.dragOver === i}
             />
           ))}
+        </div>
+      </SectionCard>
+
+      {/* ── Wishlist lock ── */}
+      <SectionCard title="Wishlist Visibility">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-1">Lock wishlist from public</p>
+            <p className="text-xs text-gray-400 leading-relaxed max-w-sm">
+              When locked, the wishlist section shows a "Coming soon" teaser and
+              all project content is hidden from the page source — not even inspecting code will reveal it.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => form.setValue("contact.wishlistLocked", !form.watch("contact.wishlistLocked"), { shouldDirty: true })}
+            className={[
+              "shrink-0 flex items-center gap-3 h-11 px-4 rounded-xl border text-sm font-medium transition-all",
+              form.watch("contact.wishlistLocked")
+                ? "border-amber-400 bg-amber-50 text-amber-800"
+                : "border-gray-200 bg-white text-gray-600 hover:border-gray-400",
+            ].join(" ")}
+          >
+            <span className={[
+              "w-5 h-5 rounded-md border-2 flex items-center justify-center transition",
+              form.watch("contact.wishlistLocked") ? "border-amber-500 bg-amber-500" : "border-gray-300",
+            ].join(" ")}>
+              {form.watch("contact.wishlistLocked") && (
+                <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M3 8l3 3 7-7" />
+                </svg>
+              )}
+            </span>
+            {form.watch("contact.wishlistLocked") ? "Locked — hidden from public" : "Public — visible to everyone"}
+          </button>
         </div>
       </SectionCard>
 
@@ -498,10 +557,10 @@ export function ContactTab({ form }: { form: UseFormReturn<SiteSettings> }) {
               <WishlistRow
                 key={f.id}
                 index={i}
-                total={wishlist.fields.length}
                 form={form}
-                onMoveUp={() => moveWishlistUp(i)}
-                onMoveDown={() => moveWishlistDown(i)}
+                dragProps={wishlistDrag.getProps(i)}
+                handleProps={wishlistDrag.handleProps}
+                isDragOver={wishlistDrag.dragOver === i}
                 onRemove={() => wishlist.remove(i)}
               />
             ))}
@@ -549,10 +608,10 @@ export function ContactTab({ form }: { form: UseFormReturn<SiteSettings> }) {
               <ServiceRow
                 key={f.id}
                 index={i}
-                total={services.fields.length}
                 form={form}
-                onMoveUp={() => moveServiceUp(i)}
-                onMoveDown={() => moveServiceDown(i)}
+                dragProps={servicesDrag.getProps(i)}
+                handleProps={servicesDrag.handleProps}
+                isDragOver={servicesDrag.dragOver === i}
                 onRemove={() => services.remove(i)}
               />
             ))}

@@ -55,6 +55,11 @@ function hydrateSettings(s: SiteSettings): SiteSettings {
     ],
     socialLinks: s.footer.socialLinks ?? [],
     copyright: s.footer.copyright || "© {year} Aymen Doin Stuff. All rights reserved.",
+    contactEmail:    s.footer.contactEmail    ?? "",
+    contactPhone:    s.footer.contactPhone    ?? "",
+    contactWhatsapp: s.footer.contactWhatsapp ?? "",
+    contactLocation: s.footer.contactLocation ?? "",
+    showDubaiTime:   s.footer.showDubaiTime   ?? true,
   };
 
   // ── About ───────────────────────────────────────────────────────────────
@@ -77,6 +82,7 @@ function hydrateSettings(s: SiteSettings): SiteSettings {
 
   // ── Contact ─────────────────────────────────────────────────────────────────
   const contact: SiteSettings["contact"] = {
+    pageTitle: s.contact?.pageTitle || "Let's Do Stuff",
     sections: s.contact?.sections?.length > 0 ? s.contact.sections : [
       { id: "wishlist", visible: true, order: 0 },
       { id: "services", visible: true, order: 1 },
@@ -84,6 +90,7 @@ function hydrateSettings(s: SiteSettings): SiteSettings {
     ],
     wishlistTitle:    s.contact?.wishlistTitle    || "2026 Wishlist",
     wishlistSubtitle: s.contact?.wishlistSubtitle ?? "",
+    wishlistLocked:   s.contact?.wishlistLocked   ?? false,
     wishlistProjects: s.contact?.wishlistProjects?.length > 0
       ? s.contact.wishlistProjects
       : (DEFAULT_WISHLIST as SiteSettings["contact"]["wishlistProjects"]),
@@ -94,7 +101,7 @@ function hydrateSettings(s: SiteSettings): SiteSettings {
     inquiryTitle: s.contact?.inquiryTitle || "General Inquiry",
   };
 
-  return { ...s, nav, home, footer, about, contact };
+  return { ...s, nav, home, footer, about, contact, comingSoon: s.comingSoon ?? false };
 }
 
 export async function getServerSiteSettings(): Promise<SiteSettings> {

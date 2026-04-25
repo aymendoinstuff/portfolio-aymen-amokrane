@@ -1,4 +1,4 @@
-// import type { Metadata } from "next"; // ✅ add
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getBaseUrl } from "@/lib/getBaseUrl";
 import type { Project } from "@/lib/types/project";
@@ -33,49 +33,39 @@ async function getProject(id: string) {
 //   return (data.items ?? []).map(({ id }) => ({ id }));
 // }
 
-/** ✅ Per-project SEO */
-// export async function generateMetadata(
-//   { params }: { params: Promise<{ id: string }> } // 👈 Promise
-// ): Promise<Metadata> {
-//   const { id } = await params;
-//   const project = await getProject(id);
-//   if (!project) {
-//     return { title: "Project not found" };
-//   }
+export async function generateMetadata(
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Metadata> {
+  const { id } = await params;
+  const project = await getProject(id);
+  if (!project) return { title: "Project not found" };
 
-//   // Adjust these to your Project shape if different
-//   const titleBase = (project as any)?.general?.title ?? "Project";
-//   const year = (project as any)?.general?.year
-//     ? ` — ${(project as any).general.year}`
-//     : "";
-//   const title = `${titleBase}${year}`;
+  const title = project.general.title ?? "Project";
+  const description =
+    project.main?.details?.tagline ??
+    project.main?.details?.summary ??
+    "Brand design case study by Aymen Amokrane.";
+  const image = project.general.heroUrl ?? undefined;
 
-//   const description =
-//     (project as any)?.general?.brief ??
-//     (project as any)?.general?.tagline ??
-//     "Project case study";
-
-//   const image =
-//     (project as any)?.general?.cover ??
-//     (project as any)?.cover ??
-//     (project as any)?.gallery?.[0]?.url;
-
-//   return {
-//     title,
-//     description,
-//     openGraph: {
-//       title,
-//       description,
-//       images: image ? [{ url: image }] : undefined,
-//     },
-//     twitter: {
-//       card: "summary_large_image",
-//       title,
-//       description,
-//       images: image ? [image] : undefined,
-//     },
-//   };
-// }
+  return {
+    title,
+    description,
+    alternates: { canonical: `/work/${id}` },
+    openGraph: {
+      title,
+      description,
+      url: `/work/${id}`,
+      type: "article",
+      images: image ? [{ url: image, width: 1200, height: 630, alt: title }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: image ? [image] : [],
+    },
+  };
+}
 
 export default async function ProjectPage({
   params,

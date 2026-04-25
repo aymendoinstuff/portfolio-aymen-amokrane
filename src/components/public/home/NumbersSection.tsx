@@ -24,7 +24,7 @@ export default function NumbersSection({ statIndices }: NumbersSectionProps) {
     <section className="max-w-6xl mx-auto px-4 py-16">
       <SectionTitle>By the numbers</SectionTitle>
 
-      <div className={`grid gap-6 md:gap-8 ${
+      <div className={`grid gap-4 ${
         displayStats.length === 1
           ? "md:grid-cols-1"
           : displayStats.length === 2
@@ -36,13 +36,13 @@ export default function NumbersSection({ statIndices }: NumbersSectionProps) {
         {displayStats.map((stat, i) => (
           <div
             key={i}
-            className="flex flex-col items-center text-center md:items-start md:text-left"
+            className="bg-white border border-gray-200 rounded-2xl px-6 py-7 flex flex-col select-none"
           >
-            <div className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">
+            <div className="text-5xl md:text-6xl font-extrabold tracking-tight leading-none mb-4">
               <CountUp value={stat.v} suffix={stat.suffix} />
             </div>
-            <h3 className="font-semibold text-base mb-1">{stat.k}</h3>
-            <p className="text-sm opacity-70">{stat.sub}</p>
+            <h3 className="font-semibold text-base leading-snug">{stat.k}</h3>
+            {stat.sub && <p className="text-sm text-gray-400 mt-1">{stat.sub}</p>}
           </div>
         ))}
       </div>

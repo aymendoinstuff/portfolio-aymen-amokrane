@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { repoGetArticleBySlug, repoGetPublishedArticles } from "@/lib/repositories/articles";
@@ -87,6 +88,36 @@ function BodyRenderer({ body }: { body: string }) {
 
 interface Props { params: Promise<{ slug: string }> }
 
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const article = await repoGetArticleBySlug(slug);
+  if (!article) return { title: "Article not found" };
+
+  const title = article.title ?? "Article";
+  const description = article.excerpt ?? "An article by Aymen Amokrane.";
+  const image = article.coverUrl ?? undefined;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/blog/${slug}` },
+    openGraph: {
+      title,
+      description,
+      url: `/blog/${slug}`,
+      type: "article",
+      publishedTime: article.createdAt ? new Date(article.createdAt).toISOString() : undefined,
+      images: image ? [{ url: image, width: 1200, height: 630, alt: title }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: image ? [image] : [],
+    },
+  };
+}
+
 export default async function ArticlePage({ params }: Props) {
   const { slug } = await params;
   const [article, settings, allArticles] = await Promise.all([
@@ -125,7 +156,7 @@ export default async function ArticlePage({ params }: Props) {
       )}
 
       {/* Title */}
-      <h1 className="text-3xl md:text-4xl font-black tracking-tight leading-tight text-gray-900">{article.title}</h1>
+      <h1 className="text-4xl md:text-5xl tracking-tight leading-[0.95] text-gray-900">{article.title}</h1>
 
       {/* Meta */}
       <div className="mt-5 flex flex-wrap items-center gap-5">
@@ -152,13 +183,6 @@ export default async function ArticlePage({ params }: Props) {
           </span>
         )}
       </div>
-
-      {/* Cover */}
-      {article.coverUrl && (
-        <div className="mt-8 overflow-hidden rounded-2xl">
-          <img src={article.coverUrl} alt={article.title} className="w-full aspect-video object-cover" />
-        </div>
-      )}
 
       {/* Excerpt callout */}
       {article.excerpt && (
@@ -219,7 +243,7 @@ export default async function ArticlePage({ params }: Props) {
                   {r.category && (
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">{r.category}</p>
                   )}
-                  <h4 className="text-sm font-bold text-gray-900 leading-snug group-hover:underline underline-offset-4 line-clamp-2">
+                  <h4 className="text-sm font-semibold text-gray-900 leading-snug group-hover:underline underline-offset-4 line-clamp-2">
                     {r.title}
                   </h4>
                   <p className="text-xs text-gray-400 mt-1">

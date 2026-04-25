@@ -1,15 +1,19 @@
 "use client";
 /**
- * HeavyScroller
- * Intercepts wheel/keyboard scroll events and replaces them with a lerp-based
- * animation, creating a "heavy" / weighted scroll feel.
+ * SmoothScroller
+ * Adds a very subtle easing to scroll — "15% dramatic" feel.
+ * Trackpad stays almost native (high lerp), mouse wheel gets a light ease.
+ * Snaps to target when within 0.5px to avoid a slow drag-tail.
  *
- * - On touch devices it falls back to native scroll (no interference).
+ * - On touch devices falls back to native scroll.
  * - Does NOT break anchor links or programmatic scroll.
  */
 import { useEffect, useRef } from "react";
 
-const LERP  = 0.035;  // lower = heavier/slower — creates suspense and weighted feel
+// Mouse wheel: gentle ease (heavier lerp = smoother/slower)
+const LERP_MOUSE    = 0.10;
+// Trackpad: nearly native — just a hair of smoothness
+const LERP_TRACKPAD = 0.28;
 const WHEEL_MULTIPLIER = 1.0;
 
 export default function HeavyScroller({ children }: { children: React.ReactNode }) {
@@ -17,6 +21,8 @@ export default function HeavyScroller({ children }: { children: React.ReactNode 
   const current = useRef(0);
   const target  = useRef(0);
   const active  = useRef(false);
+  // Adaptive lerp — updated on every wheel event based on input type
+  const lerp    = useRef(LERP_MOUSE);
 
   useEffect(() => {
     // Skip on touch-primary devices
@@ -29,10 +35,13 @@ export default function HeavyScroller({ children }: { children: React.ReactNode 
     function loop() {
       const dist = target.current - current.current;
       if (Math.abs(dist) > 0.5) {
-        current.current += dist * LERP;
+        current.current += dist * lerp.current;
         window.scrollTo(0, current.current);
         active.current = true;
-      } else {
+      } else if (active.current) {
+        // Snap to exact target — eliminates the slow drag-tail at end of scroll
+        current.current = target.current;
+        window.scrollTo(0, current.current);
         active.current = false;
       }
       raf.current = requestAnimationFrame(loop);
@@ -44,6 +53,10 @@ export default function HeavyScroller({ children }: { children: React.ReactNode 
 
     function onWheel(e: WheelEvent) {
       e.preventDefault();
+      // Trackpad heuristic: pixel-mode (deltaMode===0) with small per-event deltas
+      // Mouse wheels typically fire large deltas (≥ 50px) or use line mode (deltaMode===1)
+      const isTrackpad = e.deltaMode === 0 && Math.abs(e.deltaY) < 50;
+      lerp.current = isTrackpad ? LERP_TRACKPAD : LERP_MOUSE;
       target.current = Math.max(
         0,
         Math.min(maxScroll(), target.current + e.deltaY * WHEEL_MULTIPLIER)

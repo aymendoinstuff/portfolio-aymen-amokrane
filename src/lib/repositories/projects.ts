@@ -2,11 +2,27 @@
 import { adminDb } from "@/lib/firebase/admin";
 import type { Project } from "@/lib/types/project";
 
+// Firestore can return Timestamp objects for date fields. These crash Next.js
+// when passed as props to "use client" components. Sanitise through JSON to
+// coerce them into plain numbers/strings before they leave the repository.
+function sanitise<T>(data: unknown): T {
+  return JSON.parse(JSON.stringify(data)) as T;
+}
+
 export async function repoGetPublishedProjects(max = 24): Promise<Project[]> {
   try {
     const snap = await adminDb.collection("projects").get();
     return snap.docs
-      .map((d) => d.data() as Project)
+      .map((d) => {
+        const data = sanitise<Project>(d.data());
+        // Ensure general.id is always populated — mirrors the admin picker's
+        // fallback of `data?.general?.id ?? d.id` so featured-project ID
+        // matching works even for older docs that lack an inline general.id.
+        if (data?.general && !data.general.id) {
+          data.general.id = d.id;
+        }
+        return data;
+      })
       .filter((p) => p?.general?.published === true)
       .sort((a, b) => (b.general.updatedAt ?? 0) - (a.general.updatedAt ?? 0))
       .slice(0, max);
@@ -22,7 +38,7 @@ export async function repoGetProjectById(id: string): Promise<Project | null> {
     const snap = await adminDb.collection("projects").doc(id).get();
 
     if (snap.exists) {
-      const data = snap.data() as any;
+      const data = sanitise<any>(snap.data());
       if (data?.general?.published === true) {
         return data as Project;
       }
@@ -38,7 +54,7 @@ export async function repoGetProjectById(id: string): Promise<Project | null> {
       .get();
 
     if (!qsnap.empty) {
-      return qsnap.docs[0].data() as Project;
+      return sanitise<Project>(qsnap.docs[0].data());
     }
 
     return null;

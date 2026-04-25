@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
+import { requireAdminApi } from "@/server/auth/apiGuard";
 
 export async function GET() {
+  const deny = await requireAdminApi();
+  if (deny) return deny;
+
   try {
     const snap = await adminDb
       .collection("bookings")

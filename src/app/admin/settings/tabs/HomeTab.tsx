@@ -7,10 +7,50 @@ import { TextInput, Textarea, Button } from "../ui/Inputs";
 import { ImageUploader } from "../ui/ImageUploader";
 import { stats } from "@/lib/data/about";
 import {
-  Eye, EyeOff, ChevronUp, ChevronDown, Plus, Trash2,
+  Eye, EyeOff, Plus, Trash2,
   LayoutGrid, Quote, Hash, Users, MousePointerClick, Star,
   Loader2, Type, CheckSquare, Square, GripVertical,
 } from "lucide-react";
+
+// ─── Drag-to-reorder hook ─────────────────────────────────────────────────────
+
+type DragItemProps = {
+  draggable: true;
+  onDragStart: (e: React.DragEvent) => void;
+  onDragOver:  (e: React.DragEvent) => void;
+  onDrop:      (e: React.DragEvent) => void;
+  onDragEnd:   () => void;
+};
+
+function useDragList(onMove: (from: number, to: number) => void) {
+  const dragIdx    = React.useRef<number | null>(null);
+  const fromHandle = React.useRef(false);
+  const [dragOver, setDragOver] = React.useState<number | null>(null);
+
+  const handleProps = {
+    onPointerDown: () => { fromHandle.current = true; },
+    style: { cursor: "grab" } as React.CSSProperties,
+  };
+
+  function getProps(i: number): DragItemProps {
+    return {
+      draggable: true,
+      onDragStart: (e) => {
+        if (!fromHandle.current) { e.preventDefault(); return; }
+        dragIdx.current = i; e.dataTransfer.effectAllowed = "move";
+      },
+      onDragOver:  (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOver(i); },
+      onDrop:      (e) => {
+        e.preventDefault();
+        const from = dragIdx.current;
+        if (from != null && from !== i) onMove(from, i);
+        dragIdx.current = null; setDragOver(null);
+      },
+      onDragEnd:   () => { fromHandle.current = false; dragIdx.current = null; setDragOver(null); },
+    };
+  }
+  return { getProps, handleProps, dragOver };
+}
 
 // ─── Shared card/field components ────────────────────────────────────────────
 
@@ -182,12 +222,13 @@ function HeroTextCard({ form }: { form: UseFormReturn<SiteSettings> }) {
 // ─── ClientRow (must be its own component — hooks can't live inside .map()) ───
 
 function ClientRow({
-  index, total, form, onMove, onRemove,
+  index, form, dragProps, handleProps, isDragOver, onRemove,
 }: {
   index: number;
-  total: number;
   form: UseFormReturn<SiteSettings>;
-  onMove: (dir: 1 | -1) => void;
+  dragProps: DragItemProps;
+  handleProps: { onPointerDown: () => void; style: React.CSSProperties };
+  isDragOver: boolean;
   onRemove: () => void;
 }) {
   const [expanded, setExpanded] = React.useState(false);
@@ -195,20 +236,17 @@ function ClientRow({
   const name     = form.watch(`home.clients.${index}.name` as const);
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+    <div
+      {...dragProps}
+      className={[
+        "rounded-xl border bg-white overflow-hidden transition-all select-none",
+        isDragOver ? "border-black ring-2 ring-black/10 shadow-md" : "border-gray-200",
+      ].join(" ")}
+    >
       {/* Collapsed row */}
       <div className="flex items-center gap-3 px-3 py-2.5">
-        {/* Reorder */}
-        <div className="flex flex-col gap-0.5 shrink-0">
-          <button type="button" disabled={index === 0} onClick={() => onMove(-1)}
-            className="w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition">
-            <ChevronUp size={11} />
-          </button>
-          <button type="button" disabled={index === total - 1} onClick={() => onMove(1)}
-            className="w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition">
-            <ChevronDown size={11} />
-          </button>
-        </div>
+        {/* Drag handle */}
+        <GripVertical size={14} className="text-gray-300 shrink-0 active:cursor-grabbing" {...handleProps} />
         {/* Logo thumbnail */}
         <div className="w-10 h-10 rounded-lg shrink-0 bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden">
           {logoHref
@@ -264,6 +302,14 @@ export function HomeTab({ form }: { form: UseFormReturn<SiteSettings> }) {
   const sections    = useFieldArray({ control: form.control, name: "home.sections" });
   const testimonials = useFieldArray({ control: form.control, name: "home.testimonials" });
   const clients     = useFieldArray({ control: form.control, name: "home.clients" });
+
+  const sectionsDrag     = useDragList((from, to) => {
+    sections.move(from, to);
+    // update order fields after move
+    sections.fields.forEach((_, idx) => form.setValue(`home.sections.${idx}.order`, idx, { shouldDirty: true }));
+  });
+  const testimonialsDrag = useDragList((from, to) => testimonials.move(from, to));
+  const clientsDrag      = useDragList((from, to) => clients.move(from, to));
   const numberIndices = form.watch("home.numberStatIndices") ?? [];
   const featuredIds   = form.watch("home.featuredProjectIds") ?? [];
 
@@ -274,17 +320,29 @@ export function HomeTab({ form }: { form: UseFormReturn<SiteSettings> }) {
   React.useEffect(() => {
     fetch("/api/admin/projects/list")
       .then((r) => r.json())
-      .then((data) => setProjects(data.projects ?? []))
+      .then((data) => {
+        const loaded: ProjectSummary[] = data.projects ?? [];
+        setProjects(loaded);
+        // Auto-clean stale featured IDs that no longer point to a real project
+        const current = form.getValues("home.featuredProjectIds") ?? [];
+        const valid = current.filter((id: string) => id && loaded.some((p) => p.id === id));
+        if (valid.length !== current.length) {
+          form.setValue("home.featuredProjectIds", valid, { shouldDirty: false });
+        }
+      })
       .catch(() => setProjects([]))
       .finally(() => setProjectsLoading(false));
   }, []);
+
+  // Only count IDs that actually match a loaded project toward the 2-slot limit
+  const validFeaturedIds = featuredIds.filter((id: string) => id && projects.some((p) => p.id === id));
 
   const toggleFeatured = (id: string) => {
     const current = featuredIds;
     if (current.includes(id)) {
       form.setValue("home.featuredProjectIds", current.filter((x) => x !== id), { shouldDirty: true });
-    } else if (current.length < 2) {
-      form.setValue("home.featuredProjectIds", [...current, id], { shouldDirty: true });
+    } else if (validFeaturedIds.length < 2) {
+      form.setValue("home.featuredProjectIds", [...current.filter((x: string) => x && projects.some((p) => p.id === x)), id], { shouldDirty: true });
     }
   };
 
@@ -307,19 +365,25 @@ export function HomeTab({ form }: { form: UseFormReturn<SiteSettings> }) {
       >
         <div className="grid gap-2">
           {sections.fields.map((field, i) => {
-            // field.id is react-hook-form's internal ID — use the data field instead
             const sectionId = form.watch(`home.sections.${i}.id` as const) as string;
             const visible   = form.watch(`home.sections.${i}.visible` as const);
             const meta      = SECTION_LABELS[sectionId] ?? { name: sectionId, desc: "" };
+            const isDragOver = sectionsDrag.dragOver === i;
 
             return (
               <div
                 key={field.id}
+                {...sectionsDrag.getProps(i)}
                 className={[
-                  "flex items-center gap-3 rounded-xl border px-4 py-3 transition-all",
-                  visible ? "bg-white border-gray-200" : "bg-gray-50 border-dashed border-gray-200 opacity-50",
+                  "flex items-center gap-3 rounded-xl border px-4 py-3 transition-all select-none",
+                  isDragOver
+                    ? "border-black ring-2 ring-black/10 shadow-md bg-white"
+                    : visible ? "bg-white border-gray-200" : "bg-gray-50 border-dashed border-gray-200 opacity-50",
                 ].join(" ")}
               >
+                {/* Drag handle */}
+                <GripVertical size={14} className="text-gray-300 shrink-0 active:cursor-grabbing" {...sectionsDrag.handleProps} />
+
                 {/* Name + description */}
                 <div className="flex-1 min-w-0">
                   <p className={["text-sm font-semibold leading-tight", visible ? "text-gray-900" : "text-gray-400"].join(" ")}>
@@ -345,34 +409,6 @@ export function HomeTab({ form }: { form: UseFormReturn<SiteSettings> }) {
                   {visible ? <Eye size={12} /> : <EyeOff size={12} />}
                   {visible ? "Visible" : "Hidden"}
                 </button>
-
-                {/* Move arrows */}
-                <div className="flex gap-1">
-                  <button
-                    type="button"
-                    disabled={i === 0}
-                    onClick={() => {
-                      sections.move(i, i - 1);
-                      form.setValue(`home.sections.${i - 1}.order`, i - 1, { shouldDirty: true });
-                      form.setValue(`home.sections.${i}.order`, i, { shouldDirty: true });
-                    }}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition"
-                  >
-                    <ChevronUp size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={i === sections.fields.length - 1}
-                    onClick={() => {
-                      sections.move(i, i + 1);
-                      form.setValue(`home.sections.${i}.order`, i, { shouldDirty: true });
-                      form.setValue(`home.sections.${i + 1}.order`, i + 1, { shouldDirty: true });
-                    }}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-not-allowed transition"
-                  >
-                    <ChevronDown size={13} />
-                  </button>
-                </div>
               </div>
             );
           })}
@@ -402,9 +438,9 @@ export function HomeTab({ form }: { form: UseFormReturn<SiteSettings> }) {
       <SectionCard
         title="Featured Projects"
         icon={<Star size={14} />}
-        hint="Pick exactly 2 projects to highlight on the home page"
+        hint="Pick up to 2 projects to highlight on the home page"
         action={
-          <span className="text-xs text-gray-400 font-medium">{featuredIds.length}/2 selected</span>
+          <span className="text-xs text-gray-400 font-medium">{validFeaturedIds.length}/2 selected</span>
         }
       >
         {projectsLoading && (
@@ -421,8 +457,8 @@ export function HomeTab({ form }: { form: UseFormReturn<SiteSettings> }) {
         {!projectsLoading && projects.length > 0 && (
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
             {projects.map((p) => {
-              const selected = featuredIds.includes(p.id);
-              const disabled = !selected && featuredIds.length >= 2;
+              const selected = validFeaturedIds.includes(p.id);
+              const disabled = !selected && validFeaturedIds.length >= 2;
               return (
                 <button
                   key={p.id}
@@ -532,31 +568,20 @@ export function HomeTab({ form }: { form: UseFormReturn<SiteSettings> }) {
             const author = form.watch(`home.testimonials.${i}.author` as const);
             const role   = form.watch(`home.testimonials.${i}.role` as const);
             const company = form.watch(`home.testimonials.${i}.company` as const);
+            const isDragOver = testimonialsDrag.dragOver === i;
             return (
-              <div key={f.id} className="rounded-2xl border border-gray-200 bg-white overflow-hidden shadow-sm">
+              <div
+                key={f.id}
+                {...testimonialsDrag.getProps(i)}
+                className={[
+                  "rounded-2xl border bg-white overflow-hidden shadow-sm transition-all select-none",
+                  isDragOver ? "border-black ring-2 ring-black/10 shadow-md" : "border-gray-200",
+                ].join(" ")}
+              >
                 {/* Card header */}
                 <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 border-b border-gray-100">
-                  {/* Reorder buttons */}
-                  <div className="flex flex-col gap-0.5 shrink-0">
-                    <button
-                      type="button"
-                      disabled={i === 0}
-                      onClick={() => testimonials.move(i, i - 1)}
-                      className="w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-gray-600 hover:bg-gray-200 disabled:opacity-20 disabled:cursor-not-allowed transition"
-                      title="Move up"
-                    >
-                      <ChevronUp size={12} />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={i === testimonials.fields.length - 1}
-                      onClick={() => testimonials.move(i, i + 1)}
-                      className="w-5 h-5 flex items-center justify-center rounded text-gray-300 hover:text-gray-600 hover:bg-gray-200 disabled:opacity-20 disabled:cursor-not-allowed transition"
-                      title="Move down"
-                    >
-                      <ChevronDown size={12} />
-                    </button>
-                  </div>
+                  {/* Drag handle */}
+                  <GripVertical size={14} className="text-gray-300 shrink-0 active:cursor-grabbing" {...testimonialsDrag.handleProps} />
 
                   {/* Avatar placeholder */}
                   <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center shrink-0 text-gray-500 text-xs font-bold uppercase select-none">
@@ -655,36 +680,43 @@ export function HomeTab({ form }: { form: UseFormReturn<SiteSettings> }) {
           </div>
         }
       >
-        {clients.fields.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center">
-            <Users size={24} className="mx-auto text-gray-200 mb-3" />
-            <p className="text-sm font-medium text-gray-400 mb-1">No clients yet</p>
-            <p className="text-xs text-gray-400">Click <strong>Load examples</strong> to preview with placeholder brands.</p>
+        <Field label="Section label" hint='Shown above the logos — e.g. "Trusted by"'>
+          <TextInput placeholder="Trusted by" {...form.register("home.clientsLabel")} />
+        </Field>
+
+        <div className="border-t border-gray-100 mt-5 pt-3">
+          {clients.fields.length === 0 && (
+            <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center">
+              <Users size={24} className="mx-auto text-gray-200 mb-3" />
+              <p className="text-sm font-medium text-gray-400 mb-1">No clients yet</p>
+              <p className="text-xs text-gray-400">Click <strong>Load examples</strong> to preview with placeholder brands.</p>
+            </div>
+          )}
+
+          <div className="grid gap-2">
+            {clients.fields.map((f, i) => (
+              <ClientRow
+                key={f.id}
+                index={i}
+                form={form}
+                dragProps={clientsDrag.getProps(i)}
+                handleProps={clientsDrag.handleProps}
+                isDragOver={clientsDrag.dragOver === i}
+                onRemove={() => clients.remove(i)}
+              />
+            ))}
           </div>
-        )}
 
-        <div className="grid gap-2">
-          {clients.fields.map((f, i) => (
-            <ClientRow
-              key={f.id}
-              index={i}
-              total={clients.fields.length}
-              form={form}
-              onMove={(dir) => clients.move(i, i + dir)}
-              onRemove={() => clients.remove(i)}
-            />
-          ))}
+          {clients.fields.length > 0 && (
+            <button
+              type="button"
+              onClick={() => clients.append({ name: "", href: "", logoHref: "" })}
+              className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 py-3 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-600 transition"
+            >
+              <Plus size={14} /> Add client
+            </button>
+          )}
         </div>
-
-        {clients.fields.length > 0 && (
-          <button
-            type="button"
-            onClick={() => clients.append({ name: "", href: "", logoHref: "" })}
-            className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 py-3 text-sm text-gray-400 hover:border-gray-400 hover:text-gray-600 transition"
-          >
-            <Plus size={14} /> Add client
-          </button>
-        )}
       </SectionCard>
 
     </div>

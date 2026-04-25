@@ -10,12 +10,15 @@ import {
   FileText,
   CalendarDays,
   Globe,
+  Mail,
   ExternalLink,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import LogoutButton from "../LogoutButton";
 import { logoutAction } from "@/server/actions/auth";
+import ComingSoonToggle from "./ComingSoonToggle";
 
 type AdminLink = { href: string; label: string; icon: LucideIcon };
 
@@ -23,8 +26,10 @@ const LINKS: AdminLink[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/projects", label: "Projects", icon: FolderKanban },
   { href: "/admin/articles", label: "Articles", icon: FileText },
-  { href: "/admin/studio", label: "Studio", icon: CalendarDays },
+  { href: "/admin/inbox", label: "Inbox", icon: Mail },
+  { href: "/admin/studio", label: "Calendar", icon: CalendarDays },
   { href: "/admin/settings", label: "Site Editor", icon: Globe },
+  { href: "/admin/clients", label: "Client Vault", icon: Users },
 ];
 
 export default function AdminSidebar() {
@@ -84,8 +89,9 @@ export default function AdminSidebar() {
           })}
         </div>
 
-        {/* View site */}
-        <div className="mt-4 pt-4 border-t border-gray-100">
+        {/* Coming Soon toggle + View site */}
+        <div className="mt-4 pt-4 border-t border-gray-100 grid gap-0.5">
+          <ComingSoonToggle />
           <Link
             href="/"
             target="_blank"

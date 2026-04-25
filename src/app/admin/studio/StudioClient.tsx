@@ -3,15 +3,14 @@
 import { useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ChevronLeft, ChevronRight, Plus, X, Check, Clock,
-  Calendar, Mail, Phone, Briefcase, Ban, AlertCircle, Trash2,
-  Tag, Flame, Star, CheckCircle2, Archive,
+  ChevronLeft, ChevronRight, Plus, X,
+  Briefcase, Ban, AlertCircle, Trash2,
+  Phone, Clock,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type EventType = "call" | "project" | "blocked" | "pending";
-type LabelKey  = "urgent" | "hot-lead" | "follow-up" | "done";
 
 interface CalEvent {
   id: string;
@@ -22,51 +21,8 @@ interface CalEvent {
   startTime?: string;
   endTime?: string;
   notes?: string;
-  bookingId?: string;
   clientName?: string;
   clientEmail?: string;
-}
-
-interface Booking {
-  id: string;
-  type?: string;
-  name?: string;
-  email?: string;
-  status?: string;
-  labels?: LabelKey[];
-  createdAt?: number;
-  message?: string;
-  subject?: string;
-  serviceTitle?: string;
-  projectTitle?: string;
-  brandName?: string;
-  brief?: string;
-  budgetRange?: string;
-  timeline?: string;
-  location?: string;
-}
-
-// ─── Label config ─────────────────────────────────────────────────────────────
-
-const LABELS: Record<LabelKey, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  "urgent":    { label: "Urgent",     color: "text-red-600",    bg: "bg-red-50 border-red-200",    icon: Flame },
-  "hot-lead":  { label: "Hot Lead",   color: "text-orange-600", bg: "bg-orange-50 border-orange-200", icon: Star },
-  "follow-up": { label: "Follow-up",  color: "text-blue-600",   bg: "bg-blue-50 border-blue-200",  icon: Clock },
-  "done":      { label: "Done",       color: "text-green-600",  bg: "bg-green-50 border-green-200",icon: CheckCircle2 },
-};
-
-// Auto-label by booking type
-function autoLabel(b: Booking): string {
-  const map: Record<string, string> = {
-    wishlist:       "Wishlist",
-    branding:       "Branding",
-    "11-meet":      "1/1 Meet",
-    "brand-audit":  "Brand Audit",
-    "team-training":"Training",
-    service:        "Service",
-    inquiry:        "Inquiry",
-  };
-  return b.serviceTitle ?? b.projectTitle ?? (b.type ? (map[b.type] ?? b.type) : "Inquiry");
 }
 
 // ─── Event styles ─────────────────────────────────────────────────────────────
@@ -98,32 +54,29 @@ const MONTHS = ["January","February","March","April","May","June","July","August
 
 function EventModal({
   date,
-  booking,
   existingEvent,
   onClose,
   onSave,
   onDelete,
 }: {
   date: string;
-  booking?: Booking | null;
   existingEvent?: CalEvent | null;
   onClose: () => void;
   onSave: (event: Omit<CalEvent, "id">) => Promise<void>;
   onDelete?: (id: string) => Promise<void>;
 }) {
-  const [title, setTitle]       = useState(existingEvent?.title ?? booking?.name ?? "");
-  const [type, setType]         = useState<EventType>(existingEvent?.type ?? (booking ? "call" : "blocked"));
+  const [title, setTitle]       = useState(existingEvent?.title ?? "");
+  const [type, setType]         = useState<EventType>(existingEvent?.type ?? "call");
   const [eventDate, setDate]    = useState(existingEvent?.date ?? date);
   const [endDate, setEndDate]   = useState(existingEvent?.endDate ?? "");
   const [startTime, setStart]   = useState(existingEvent?.startTime ?? "");
   const [endTime, setEnd]       = useState(existingEvent?.endTime ?? "");
-  const [clientName, setClient] = useState(existingEvent?.clientName ?? booking?.name ?? "");
-  const [clientEmail, setEmail] = useState(existingEvent?.clientEmail ?? booking?.email ?? "");
+  const [clientName, setClient] = useState(existingEvent?.clientName ?? "");
+  const [clientEmail, setEmail] = useState(existingEvent?.clientEmail ?? "");
   const [notes, setNotes]       = useState(existingEvent?.notes ?? "");
   const [saving, setSaving]     = useState(false);
 
-  // Warn if call not on Sunday 11am–5pm (Dubai time = UTC+4)
-  const selectedDay = new Date(eventDate + "T12:00:00").getDay(); // 0=Sun
+  const selectedDay = new Date(eventDate + "T12:00:00").getDay();
   const isCallWarning = type === "call" && selectedDay !== 0;
   const isTimeWarning = type === "call" && startTime && (startTime < "11:00" || startTime > "17:00");
 
@@ -141,7 +94,6 @@ function EventModal({
       ...(clientName ? { clientName } : {}),
       ...(clientEmail ? { clientEmail } : {}),
       ...(notes ? { notes } : {}),
-      ...(booking?.id ? { bookingId: booking.id } : existingEvent?.bookingId ? { bookingId: existingEvent.bookingId } : {}),
     });
     setSaving(false);
     onClose();
@@ -279,254 +231,6 @@ function EventModal({
   );
 }
 
-// ─── Booking Panel ────────────────────────────────────────────────────────────
-
-function BookingPanel({
-  bookings,
-  onSchedule,
-  onDecline,
-  onMarkRead,
-  onLabel,
-}: {
-  bookings: Booking[];
-  onSchedule: (b: Booking) => void;
-  onDecline: (id: string) => void;
-  onMarkRead: (id: string) => void;
-  onLabel: (id: string, labels: LabelKey[]) => void;
-}) {
-  const [selected, setSelected] = useState<Booking | null>(null);
-  const [filterLabel, setFilterLabel] = useState<LabelKey | "all">("all");
-
-  const newCount = bookings.filter(b => b.status === "new").length;
-
-  const filteredBookings = filterLabel === "all"
-    ? bookings
-    : bookings.filter(b => b.labels?.includes(filterLabel));
-
-  const statusBadge = (status?: string) => {
-    if (status === "confirmed") return "bg-green-100 text-green-700";
-    if (status === "declined")  return "bg-red-100 text-red-500";
-    if (status === "read")      return "bg-gray-100 text-gray-500";
-    return "bg-yellow-100 text-yellow-700";
-  };
-
-  function toggleLabel(bookingId: string, current: LabelKey[] | undefined, key: LabelKey) {
-    const cur = current ?? [];
-    const next = cur.includes(key) ? cur.filter(l => l !== key) : [...cur, key];
-    onLabel(bookingId, next);
-    if (selected?.id === bookingId) {
-      setSelected(prev => prev ? { ...prev, labels: next } : null);
-    }
-  }
-
-  return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-            <Mail size={14} className="text-gray-400" />
-            Bookings
-          </h2>
-          {newCount > 0 && (
-            <span className="bg-black text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-              {newCount} new
-            </span>
-          )}
-        </div>
-        {/* Label filter pills */}
-        <div className="flex gap-1 overflow-x-auto pb-0.5">
-          <button onClick={() => setFilterLabel("all")}
-            className={`shrink-0 text-[10px] px-2 py-1 rounded-full font-semibold transition border ${filterLabel === "all" ? "bg-black text-white border-black" : "border-gray-200 text-gray-500 hover:border-gray-400"}`}
-          >All</button>
-          {(Object.keys(LABELS) as LabelKey[]).map(k => {
-            const L = LABELS[k];
-            const Icon = L.icon;
-            return (
-              <button key={k} onClick={() => setFilterLabel(filterLabel === k ? "all" : k)}
-                className={`shrink-0 flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-semibold transition border ${filterLabel === k ? `${L.bg} ${L.color} border-current` : "border-gray-200 text-gray-500 hover:border-gray-400"}`}
-              >
-                <Icon size={9} />{L.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Detail slide-in */}
-      <AnimatePresence>
-        {selected && (
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 350 }}
-            className="absolute inset-0 z-20 bg-white flex flex-col"
-          >
-            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100 shrink-0">
-              <button onClick={() => setSelected(null)} className="p-1 rounded-lg hover:bg-gray-100 transition">
-                <ChevronLeft size={14} />
-              </button>
-              <span className="text-sm font-bold text-gray-900 truncate">{selected.name}</span>
-              <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusBadge(selected.status)}`}>
-                {selected.status ?? "new"}
-              </span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-              {/* Auto-type badge */}
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-full text-[10px] font-semibold text-gray-600">
-                <Tag size={9} />
-                {autoLabel(selected)}
-              </div>
-
-              {/* Labels */}
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-1.5">Labels</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(Object.keys(LABELS) as LabelKey[]).map(k => {
-                    const L = LABELS[k];
-                    const Icon = L.icon;
-                    const active = selected.labels?.includes(k);
-                    return (
-                      <button key={k} type="button"
-                        onClick={() => toggleLabel(selected.id, selected.labels, k)}
-                        className={`flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full font-semibold border transition ${active ? `${L.bg} ${L.color} border-current` : "border-gray-200 text-gray-400 hover:border-gray-400"}`}
-                      >
-                        <Icon size={9} />{L.label}
-                        {active && <Check size={8} className="ml-0.5" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">From</p>
-                <p className="text-sm font-semibold">{selected.name}</p>
-                <a href={`mailto:${selected.email}`} className="text-xs text-blue-600 underline">{selected.email}</a>
-              </div>
-
-              {selected.subject && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Subject</p>
-                  <p className="text-sm">{selected.subject}</p>
-                </div>
-              )}
-
-              {(selected.message ?? selected.brief) && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Message</p>
-                  <p className="text-sm text-gray-700 leading-relaxed">{selected.message ?? selected.brief}</p>
-                </div>
-              )}
-
-              {selected.budgetRange && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Budget</p>
-                  <p className="text-sm">{selected.budgetRange}</p>
-                </div>
-              )}
-
-              {selected.timeline && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Timeline</p>
-                  <p className="text-sm">{selected.timeline}</p>
-                </div>
-              )}
-
-              {selected.location && (
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Location</p>
-                  <p className="text-sm">{selected.location}</p>
-                </div>
-              )}
-
-              {selected.createdAt && (
-                <p className="text-[10px] text-gray-400 pt-2">
-                  Received {new Date(selected.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
-                </p>
-              )}
-            </div>
-
-            {selected.status !== "confirmed" && selected.status !== "declined" && (
-              <div className="px-4 py-4 border-t border-gray-100 space-y-2 shrink-0">
-                <button
-                  onClick={() => { onSchedule(selected); setSelected(null); }}
-                  className="w-full py-2.5 bg-black text-white text-sm font-semibold rounded-xl hover:bg-gray-900 transition flex items-center justify-center gap-2"
-                >
-                  <Calendar size={14} />
-                  Schedule on Calendar
-                </button>
-                <button
-                  onClick={() => { onDecline(selected.id); setSelected({ ...selected, status: "declined" }); }}
-                  className="w-full py-2 border border-gray-200 text-gray-600 text-sm rounded-xl hover:border-red-300 hover:text-red-600 transition"
-                >
-                  Decline
-                </button>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* List */}
-      <div className="flex-1 overflow-y-auto">
-        {filteredBookings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-gray-300">
-            <Archive size={24} className="mb-2" />
-            <p className="text-xs">{filterLabel === "all" ? "No bookings yet" : `No ${LABELS[filterLabel as LabelKey]?.label} bookings`}</p>
-          </div>
-        ) : (
-          filteredBookings.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => { setSelected(b); if (b.status === "new") onMarkRead(b.id); }}
-              className="w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-gray-50 transition"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className={`text-sm truncate ${b.status === "new" ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}>
-                    {b.name ?? "Unknown"}
-                  </p>
-                  <p className="text-xs text-gray-400 truncate">{autoLabel(b)}</p>
-                  {/* Label chips */}
-                  {b.labels && b.labels.length > 0 && (
-                    <div className="flex gap-1 mt-1 flex-wrap">
-                      {b.labels.map(k => {
-                        const L = LABELS[k];
-                        if (!L) return null;
-                        const Icon = L.icon;
-                        return (
-                          <span key={k} className={`inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-semibold border ${L.bg} ${L.color}`}>
-                            <Icon size={8} />{L.label}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  {b.status === "new" && <span className="w-2 h-2 bg-black rounded-full" />}
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${statusBadge(b.status)}`}>
-                    {b.status ?? "new"}
-                  </span>
-                </div>
-              </div>
-              {b.createdAt && (
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  {new Date(b.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </p>
-              )}
-            </button>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ─── Calendar ─────────────────────────────────────────────────────────────────
 
 function CalendarView({
@@ -589,12 +293,10 @@ function CalendarView({
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Project capacity badge */}
           <div className={`flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full ${activeProjects >= 2 ? "bg-red-50 text-red-600" : activeProjects === 1 ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"}`}>
             <Briefcase size={10} />
             {activeProjects}/2 projects
           </div>
-          {/* Legend */}
           {(Object.keys(EVENT_STYLES) as EventType[]).map(t => (
             <span key={t} className="hidden lg:flex items-center gap-1 text-[10px] text-gray-500">
               <span className={`w-2 h-2 rounded-full ${EVENT_STYLES[t].dot}`} />
@@ -623,7 +325,6 @@ function CalendarView({
             const dayEvents = eventsForDay(day);
             const isToday = ds === today;
             const isPast = ds < today;
-            // Sundays = 0
             const isSunday = new Date(ds + "T12:00:00").getDay() === 0;
 
             return (
@@ -701,29 +402,22 @@ function CalendarView({
 // ─── Main StudioClient ────────────────────────────────────────────────────────
 
 export default function StudioClient({
-  initialBookings,
   initialEvents,
 }: {
-  initialBookings: Booking[];
   initialEvents: CalEvent[];
 }) {
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
-  const [events,   setEvents]   = useState<CalEvent[]>(initialEvents);
-  const [tab, setTab] = useState<"bookings" | "calendar">("bookings");
+  const [events, setEvents] = useState<CalEvent[]>(initialEvents);
 
   const [modal, setModal] = useState<{
     date: string;
-    booking?: Booking | null;
     existing?: CalEvent | null;
   } | null>(null);
 
-  // Count active projects (confirmed or scheduled project events in the future or ongoing)
   const today = todayStr();
   const activeProjects = events.filter(
     e => e.type === "project" && (e.endDate ?? e.date) >= today
   ).length;
 
-  // ── API helpers ──
   const createEvent = useCallback(async (data: Omit<CalEvent, "id">) => {
     const res = await fetch("/api/admin/events", {
       method: "POST",
@@ -734,9 +428,6 @@ export default function StudioClient({
     const json = await res.json() as { id: string };
     const newEvent: CalEvent = { id: json.id, ...data };
     setEvents(prev => [...prev, newEvent].sort((a, b) => a.date.localeCompare(b.date)));
-    if (data.bookingId) {
-      setBookings(prev => prev.map(b => b.id === data.bookingId ? { ...b, status: "confirmed" } : b));
-    }
   }, []);
 
   const updateEvent = useCallback(async (data: Omit<CalEvent, "id"> & { id: string }) => {
@@ -753,45 +444,22 @@ export default function StudioClient({
     setEvents(prev => prev.filter(e => e.id !== id));
   }, []);
 
-  const updateBooking = useCallback(async (id: string, status: string) => {
-    await fetch(`/api/admin/bookings/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, status } : b));
-  }, []);
-
-  const labelBooking = useCallback(async (id: string, labels: LabelKey[]) => {
-    // Optimistic update
-    setBookings(prev => prev.map(b => b.id === id ? { ...b, labels } : b));
-    // Persist — the PATCH endpoint accepts any extra fields
-    await fetch(`/api/admin/bookings/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: bookings.find(b => b.id === id)?.status ?? "read", labels }),
-    });
-  }, [bookings]);
-
-  const newCount = bookings.filter(b => b.status === "new").length;
-
   return (
     <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 shrink-0 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-gray-900">Studio</h1>
-          <p className="text-xs text-gray-400 mt-0.5">Calendar · Bookings · Schedule</p>
+          <h1 className="text-lg font-bold text-gray-900">Calendar</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Schedule confirmed sessions after reaching out to clients</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Capacity warning */}
           {activeProjects >= 2 && (
             <span className="text-xs font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200">
               At capacity — 2 active projects
             </span>
           )}
           <button
-            onClick={() => { setModal({ date: new Date().toISOString().slice(0, 10) }); setTab("calendar"); }}
+            onClick={() => setModal({ date: new Date().toISOString().slice(0, 10) })}
             className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-gray-800 transition"
           >
             <Plus size={14} />
@@ -800,73 +468,14 @@ export default function StudioClient({
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200 px-6 shrink-0">
-        <div className="flex gap-1">
-          {(["bookings", "calendar"] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`relative px-4 py-3 text-sm font-semibold capitalize transition-colors ${tab === t ? "text-gray-900" : "text-gray-400 hover:text-gray-600"}`}
-            >
-              {t}
-              {t === "bookings" && newCount > 0 && (
-                <span className="ml-1.5 bg-black text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
-                  {newCount}
-                </span>
-              )}
-              {tab === t && (
-                <motion.div
-                  layoutId="studio-tab-indicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-black"
-                  transition={{ type: "spring", damping: 30, stiffness: 400 }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab panels */}
-      <div className="flex-1 min-h-0 overflow-hidden bg-white relative">
-        <AnimatePresence mode="wait" initial={false}>
-          {tab === "bookings" ? (
-            <motion.div
-              key="bookings"
-              initial={{ opacity: 0, x: -16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className="absolute inset-0 flex flex-col overflow-hidden"
-            >
-              <div className="relative flex-1 overflow-hidden">
-                <BookingPanel
-                  bookings={bookings}
-                  onSchedule={(b) => { setModal({ date: new Date().toISOString().slice(0, 10), booking: b }); setTab("calendar"); }}
-                  onDecline={(id) => updateBooking(id, "declined")}
-                  onMarkRead={(id) => updateBooking(id, "read")}
-                  onLabel={labelBooking}
-                />
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="calendar"
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 16 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className="absolute inset-0"
-            >
-              <CalendarView
-                events={events}
-                activeProjects={activeProjects}
-                onDayClick={(date) => setModal({ date, booking: null, existing: null })}
-                onEventClick={(event) => setModal({ date: event.date, existing: event })}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* Calendar */}
+      <div className="flex-1 min-h-0 overflow-hidden bg-white">
+        <CalendarView
+          events={events}
+          activeProjects={activeProjects}
+          onDayClick={(date) => setModal({ date, existing: null })}
+          onEventClick={(event) => setModal({ date: event.date, existing: event })}
+        />
       </div>
 
       {/* Event modal */}
@@ -874,7 +483,6 @@ export default function StudioClient({
         {modal && (
           <EventModal
             date={modal.date}
-            booking={modal.booking}
             existingEvent={modal.existing}
             onClose={() => setModal(null)}
             onSave={modal.existing

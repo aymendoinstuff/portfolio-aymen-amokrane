@@ -7,6 +7,7 @@ import { getServerSiteSettings } from "@/lib/settings/server";
 import Footer from "@/components/public/common/Footer";
 import NavBar from "@/components/public/common/Navbar";
 import HeavyScroller from "@/components/public/home/HeavyScroller";
+import ComingSoon from "@/components/public/ComingSoon";
 
 export default async function SiteLayout({
   children,
@@ -14,6 +15,19 @@ export default async function SiteLayout({
   children: React.ReactNode;
 }) {
   const settings = await getServerSiteSettings();
+
+  // ── Coming Soon gate ──────────────────────────────────────────────────────
+  if (settings.comingSoon) {
+    return (
+      <>
+        {/* Preload logo so it's in browser cache before React hydrates */}
+        {settings.nav.logoUrl && (
+          <link rel="preload" as="image" href={settings.nav.logoUrl} />
+        )}
+        <ComingSoon settings={{ nav: settings.nav, footer: settings.footer }} />
+      </>
+    );
+  }
 
   return (
     <HeavyScroller>

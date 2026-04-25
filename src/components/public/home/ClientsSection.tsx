@@ -5,9 +5,10 @@ type Client = z.infer<typeof ClientSchema>;
 
 interface ClientsSectionProps {
   clients: Client[];
+  label?: string;
 }
 
-export default function ClientsSection({ clients }: ClientsSectionProps) {
+export default function ClientsSection({ clients, label = "Trusted by" }: ClientsSectionProps) {
   if (clients.length === 0) return null;
 
   return (
@@ -15,7 +16,7 @@ export default function ClientsSection({ clients }: ClientsSectionProps) {
       <div className="max-w-5xl mx-auto px-4">
         {/* Section label */}
         <p className="text-center text-xs font-semibold uppercase tracking-[0.25em] text-gray-400 mb-14">
-          Trusted by
+          {label}
         </p>
 
         {/* Logo grid — large logos, name underneath */}

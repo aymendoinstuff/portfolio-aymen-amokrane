@@ -9,8 +9,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        sans:   ["Roboto", "ui-sans-serif", "system-ui", "sans-serif"],
         Roboto: ["Roboto", "sans-serif"],
-
       },
       colors: {
         // background: "var(--background)",

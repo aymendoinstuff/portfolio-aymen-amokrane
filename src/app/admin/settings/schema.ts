@@ -133,6 +133,7 @@ export const SettingsSchema = z.object({
       featuredProjectIds: z.array(z.string()).default([]),
       carousel: z.array(HomeCarouselItemSchema).default([]),
       clients: z.array(ClientSchema).default([]),
+      clientsLabel: z.string().default("Trusted by"),
       sections: z.array(HomeSectionConfigSchema).default([
         { id: "hero", visible: true, order: 0 },
         { id: "featured_projects", visible: true, order: 1 },
@@ -158,6 +159,7 @@ export const SettingsSchema = z.object({
       featuredProjectIds: [],
       carousel: [],
       clients: [],
+      clientsLabel: "Trusted by",
       sections: [
         { id: "hero", visible: true, order: 0 },
         { id: "featured_projects", visible: true, order: 1 },
@@ -188,6 +190,13 @@ export const SettingsSchema = z.object({
       skills: z.array(z.string()).default([]),
       tools: z.array(z.string()).default([]),
       stats: z.array(StatSchema).default([]),
+      sectionTitles: z.object({
+        experience: z.string().default("Experience"),
+        education:  z.string().default("Education"),
+        skills:     z.string().default("Skills & Focus"),
+        tools:      z.string().default("Tools"),
+        numbers:    z.string().default("By the numbers"),
+      }).default({ experience: "Experience", education: "Education", skills: "Skills & Focus", tools: "Tools", numbers: "By the numbers" }),
     })
     .default({
       personal: { name: "", role: "", location: "" },
@@ -200,19 +209,23 @@ export const SettingsSchema = z.object({
       skills: [],
       tools: [],
       stats: [],
+      sectionTitles: { experience: "Experience", education: "Education", skills: "Skills & Focus", tools: "Tools", numbers: "By the numbers" },
     }),
 
   work: z
     .object({
+      pageTitle: z.string().default(""),
       /** CHANGED: string[] -> { value: string }[] */
       categories: z.array(CategorySchema).default([]),
       main: z.array(WorkFeatureSchema).default([]),
       collaborations: z.array(CollaborationFeatureSchema).default([]),
     })
-    .default({ categories: [], main: [], collaborations: [] }),
+    .default({ pageTitle: "", categories: [], main: [], collaborations: [] }),
 
   blog: z
     .object({
+      pageTitle:    z.string().default(""),
+      pageSubtitle: z.string().default(""),
       postsPerPage: z.number().int().min(1).max(50).default(10),
       showDates: z.boolean().default(true),
       newsletterHref: z.string().default(""),
@@ -220,6 +233,8 @@ export const SettingsSchema = z.object({
       featured: z.array(BlogFeatureSchema).default([]),
     })
     .default({
+      pageTitle: "",
+      pageSubtitle: "",
       postsPerPage: 10,
       showDates: true,
       newsletterHref: "",
@@ -235,6 +250,12 @@ export const SettingsSchema = z.object({
       links: z.array(NavLinkSchema).default([]),
       socialLinks: z.array(SocialLinkSchema).default([]),
       copyright: z.string().default(""),
+      // Contact info strip
+      contactEmail:    z.string().default(""),
+      contactPhone:    z.string().default(""),
+      contactWhatsapp: z.string().default(""),
+      contactLocation: z.string().default(""),
+      showDubaiTime:   z.boolean().default(true),
     })
     .default({
       ctaHeadline: "",
@@ -243,10 +264,18 @@ export const SettingsSchema = z.object({
       links: [],
       socialLinks: [],
       copyright: "",
+      contactEmail: "",
+      contactPhone: "",
+      contactWhatsapp: "",
+      contactLocation: "",
+      showDubaiTime: true,
     }),
+
+  comingSoon: z.boolean().default(false),
 
   contact: z
     .object({
+      pageTitle: z.string().default(""),
       sections: z.array(ContactSectionConfigSchema).default([
         { id: "wishlist", visible: true, order: 0 },
         { id: "services", visible: true, order: 1 },
@@ -254,12 +283,14 @@ export const SettingsSchema = z.object({
       ]),
       wishlistTitle: z.string().default("2026 Wishlist"),
       wishlistSubtitle: z.string().default(""),
+      wishlistLocked: z.boolean().default(false),
       wishlistProjects: z.array(WishlistProjectSchema).default([]),
       servicesTitle: z.string().default("My Services"),
       services: z.array(ServiceSchema).default([]),
       inquiryTitle: z.string().default("General Inquiry"),
     })
     .default({
+      pageTitle: "",
       sections: [
         { id: "wishlist", visible: true, order: 0 },
         { id: "services", visible: true, order: 1 },
@@ -267,6 +298,7 @@ export const SettingsSchema = z.object({
       ],
       wishlistTitle: "2026 Wishlist",
       wishlistSubtitle: "",
+      wishlistLocked: false,
       wishlistProjects: [],
       servicesTitle: "My Services",
       services: [],

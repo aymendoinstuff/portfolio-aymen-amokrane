@@ -137,7 +137,7 @@ function ArticleCard({ article }: { article: ArticleDoc }) {
         </div>
 
         {/* Title */}
-        <h2 className="text-xl font-bold text-gray-900 leading-tight group-hover:underline underline-offset-4 decoration-2 transition-all">
+        <h2 className="text-xl font-semibold text-gray-900 leading-snug tracking-tight group-hover:underline underline-offset-4 decoration-1 transition-all">
           {article.title}
         </h2>
 

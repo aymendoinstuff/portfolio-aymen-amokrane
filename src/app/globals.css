@@ -1,17 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,400&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 :root {
   --nav-h: 64px;
 }
-html,
-body {
-  height: 100%;
-  /* Prevent MacBook/iOS rubber-band overscroll from showing white space */
-  overscroll-behavior: none;
-}
 body {
   background: #fff;
   color: #000;
+  font-family: "Roboto", sans-serif;
 }

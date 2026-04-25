@@ -1,5 +1,3 @@
-import FilterPill from "./components/FilterPill";
-
 // First 6 shown individually; everything else is grouped under "Others"
 const CATEGORY_PILLS = [
   "Brand Strategy",
@@ -20,6 +18,31 @@ export type WorkFilterBarProps = Readonly<{
   children?: React.ReactNode;
 }>;
 
+function Pill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        "px-4 py-1.5 rounded-full text-sm font-medium transition-all border",
+        active
+          ? "bg-black text-white border-black"
+          : "bg-white text-gray-600 border-gray-200 hover:border-gray-400",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
+
 export function WorkFilters({
   years,
   filterYear,
@@ -29,48 +52,36 @@ export function WorkFilters({
   children,
 }: WorkFilterBarProps) {
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="uppercase tracking-[0.2em] text-[12px]">Year</span>
+    <div className="space-y-4">
+      {/* Year row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap gap-2">
-          <FilterPill
-            active={filterYear === "All"}
-            onClick={() => onYearChange("All")}
-          >
-            All
-          </FilterPill>
+          <Pill active={filterYear === "All"} onClick={() => onYearChange("All")}>All years</Pill>
           {years.map((y) => (
-            <FilterPill
+            <Pill
               key={y}
               active={filterYear === String(y)}
               onClick={() => onYearChange(String(y))}
             >
               {y}
-            </FilterPill>
+            </Pill>
           ))}
         </div>
+        <div className="text-sm text-gray-400">{children}</div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="uppercase tracking-[0.2em] text-[12px]">Category</span>
-        <div className="flex flex-wrap gap-2">
-          <FilterPill
-            active={filterCat === "All"}
-            onClick={() => onCatChange("All")}
+      {/* Category row */}
+      <div className="flex flex-wrap gap-2">
+        <Pill active={filterCat === "All"} onClick={() => onCatChange("All")}>All categories</Pill>
+        {CATEGORY_PILLS.map((c) => (
+          <Pill
+            key={c}
+            active={filterCat === c}
+            onClick={() => onCatChange(c)}
           >
-            All
-          </FilterPill>
-          {CATEGORY_PILLS.map((c) => (
-            <FilterPill
-              key={c}
-              active={filterCat === c}
-              onClick={() => onCatChange(c)}
-            >
-              {c}
-            </FilterPill>
-          ))}
-        </div>
-        <div className="ml-auto text-xs opacity-70">{children}</div>
+            {c}
+          </Pill>
+        ))}
       </div>
     </div>
   );

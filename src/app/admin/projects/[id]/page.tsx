@@ -10,10 +10,22 @@ export default async function EditProjectPage(props: {
   const { id } = await props.params;
   const snap = await adminDb.collection("projects").doc(id).get();
 
-  return (
-    <ProjectForm
-      id={id}
-      initial={snap.exists ? (snap.data() as any) : {}}
-    />
-  );
+  // Sanitise via JSON round-trip so that any Firestore Timestamps (or other
+  // non-plain objects) are coerced to plain values before being passed as props
+  // to the "use client" ProjectForm.  Only forward the fields the form needs so
+  // that internal metadata (_duplicatedFrom, _duplicatedAt, etc.) never reaches
+  // the client component at all.
+  let initial: Record<string, unknown> = {};
+  if (snap.exists) {
+    const raw = snap.data() as any;
+    const picked = {
+      general: raw.general,
+      main:    raw.main,
+      notes:   raw.notes,
+      extra:   raw.extra,
+    };
+    initial = JSON.parse(JSON.stringify(picked));
+  }
+
+  return <ProjectForm id={id} initial={initial} />;
 }

@@ -21,6 +21,12 @@ export type ProjectMain = {
   details: ProjectMainDetails;
 };
 
+// Free-form custom note entry
+export type CustomNote = {
+  title: string;
+  content: string;
+};
+
 // Notes section (metadata)
 export type ProjectNotes = {
   brief?: string;
@@ -30,6 +36,7 @@ export type ProjectNotes = {
   year?: number;
   region?: string;
   deliverables?: string;
+  customNotes?: CustomNote[];  // free-form entries with custom title + content
 };
 
 // Block system
@@ -49,6 +56,8 @@ export type TextBlock = {
   type: "text";
   content: string;
   align: "left" | "center" | "right";
+  size?: "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+  weight?: "normal" | "medium" | "semibold" | "bold" | "black";
 };
 
 export type Block = MediaBlock | TextBlock;

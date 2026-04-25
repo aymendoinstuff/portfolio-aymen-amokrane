@@ -1,17 +1,25 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "About",
+  description: "Senior Brand Designer based in Dubai. Strategy-led identities, visual systems, and design that scales.",
+  alternates: { canonical: "/about" },
+  openGraph: { title: "About — Aymen Amokrane", url: "/about", type: "website" },
+};
+
 import SectionTitle from "@/components/SectionTitle";
 import CountUp from "@/components/public/about/CountUp";
 import { getServerSiteSettings } from "@/lib/settings/server";
 
 /* ===== Style tokens ===== */
-const container   = "max-w-5xl mx-auto px-4";
-const titleStyle  = "text-sm font-semibold uppercase tracking-[0.15em]";
-const tagStyle    = "border px-2 py-1 rounded-full text-xs";
-const bigNumber   = "text-6xl md:text-7xl font-extrabold leading-none tracking-tight bg-clip-text text-transparent bg-gradient-to-b from-black to-black/70";
+const container  = "max-w-6xl mx-auto px-4";
+const titleStyle = "text-sm font-semibold uppercase tracking-[0.15em]";
+const tagStyle   = "border px-2 py-1 rounded-full text-xs";
 /* ======================== */
 
 export default async function AboutPage() {
   const settings = await getServerSiteSettings();
-  const { personal, heroAvatarUrl, heroCoverUrl, intro, experiences, education, skills, tools, stats } = settings.about;
+  const { personal, heroAvatarUrl, heroCoverUrl, intro, experiences, education, skills, tools, stats, sectionTitles } = settings.about;
 
   const name     = personal.name     || "Aymen Doin Stuff";
   const role     = personal.role     || "Senior Brand Designer";
@@ -60,7 +68,7 @@ export default async function AboutPage() {
       {/* ── Experience ── */}
       {experiences.length > 0 && (
         <section className={`${container} pb-10`}>
-          <SectionTitle>Experience</SectionTitle>
+          <SectionTitle>{sectionTitles?.experience || "Experience"}</SectionTitle>
           <div className="divide-y divide-black/40">
             {experiences.map((e, i) => (
               <div key={i} className="py-4">
@@ -80,7 +88,7 @@ export default async function AboutPage() {
         <section className={`${container} pb-10 grid md:grid-cols-3 gap-6`}>
           {education.length > 0 && (
             <div>
-              <div className={titleStyle}>Education</div>
+              <div className={titleStyle}>{sectionTitles?.education || "Education"}</div>
               <ul className="mt-3 space-y-2 text-sm">
                 {education.map((item, i) => <li key={i}>{item}</li>)}
               </ul>
@@ -88,7 +96,7 @@ export default async function AboutPage() {
           )}
           {skills.length > 0 && (
             <div>
-              <div className={titleStyle}>Skills &amp; Focus</div>
+              <div className={titleStyle}>{sectionTitles?.skills || "Skills \u0026 Focus"}</div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {skills.map((s) => <span key={s} className={tagStyle}>{s}</span>)}
               </div>
@@ -96,7 +104,7 @@ export default async function AboutPage() {
           )}
           {tools.length > 0 && (
             <div>
-              <div className={titleStyle}>Tools</div>
+              <div className={titleStyle}>{sectionTitles?.tools || "Tools"}</div>
               <div className="mt-3 flex flex-wrap gap-2">
                 {tools.map((t) => <span key={t} className={tagStyle}>{t}</span>)}
               </div>
@@ -109,15 +117,15 @@ export default async function AboutPage() {
       {stats.length > 0 && (
         <section>
           <div className={`${container} py-16`}>
-            <SectionTitle>By the numbers</SectionTitle>
-            <div className="grid gap-x-10 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+            <SectionTitle>{sectionTitles?.numbers || "By the numbers"}</SectionTitle>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {stats.map((s, i) => (
-                <div key={i} className="select-none">
-                  <div className={bigNumber}>
+                <div key={i} className="bg-white border border-gray-200 rounded-2xl px-6 py-7 flex flex-col select-none">
+                  <div className="text-5xl md:text-6xl font-extrabold tracking-tight leading-none mb-4">
                     <CountUp value={s.v} suffix={s.suffix} />
                   </div>
-                  <div className="mt-3 text-lg font-semibold">{s.k}</div>
-                  {s.sub && <div className="text-sm opacity-70">{s.sub}</div>}
+                  <div className="font-semibold text-base leading-snug">{s.k}</div>
+                  {s.sub && <div className="text-sm text-gray-400 mt-1">{s.sub}</div>}
                 </div>
               ))}
             </div>

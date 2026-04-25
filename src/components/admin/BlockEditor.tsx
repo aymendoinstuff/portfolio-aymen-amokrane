@@ -330,33 +330,96 @@ function BlockContent({
   }
 
   if (block.type === "text") {
+    const sizeOptions: { value: NonNullable<typeof block.size>; label: string }[] = [
+      { value: "sm",  label: "XS" },
+      { value: "base",label: "S" },
+      { value: "lg",  label: "M" },
+      { value: "xl",  label: "L" },
+      { value: "2xl", label: "XL" },
+      { value: "3xl", label: "2X" },
+      { value: "4xl", label: "3X" },
+    ];
+    const weightOptions: { value: NonNullable<typeof block.weight>; label: string }[] = [
+      { value: "normal",   label: "Thin" },
+      { value: "medium",   label: "Med" },
+      { value: "semibold", label: "Semi" },
+      { value: "bold",     label: "Bold" },
+      { value: "black",    label: "Black" },
+    ];
+    const currentSize   = block.size   ?? "3xl";
+    const currentWeight = block.weight ?? "bold";
+
     return (
       <div className="grid gap-3">
-        <div className="flex gap-1.5 p-1.5 bg-gray-100 rounded-lg w-fit">
-          {[
-            { align: "left" as const, Icon: AlignLeft },
-            { align: "center" as const, Icon: AlignCenter },
-            { align: "right" as const, Icon: AlignRight },
-          ].map(({ align, Icon }) => (
-            <button
-              key={align}
-              type="button"
-              onClick={() => onChange({ ...block, align })}
-              className={[
-                "p-2 rounded-md transition-all",
-                block.align === align
-                  ? "bg-white text-black shadow"
-                  : "text-gray-400 hover:text-gray-600",
-              ].join(" ")}
-            >
-              <Icon size={16} />
-            </button>
-          ))}
+        {/* Toolbar row */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Alignment */}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+            {[
+              { align: "left" as const, Icon: AlignLeft },
+              { align: "center" as const, Icon: AlignCenter },
+              { align: "right" as const, Icon: AlignRight },
+            ].map(({ align, Icon }) => (
+              <button
+                key={align}
+                type="button"
+                onClick={() => onChange({ ...block, align })}
+                className={[
+                  "p-2 rounded-md transition-all",
+                  block.align === align
+                    ? "bg-white text-black shadow"
+                    : "text-gray-400 hover:text-gray-600",
+                ].join(" ")}
+              >
+                <Icon size={15} />
+              </button>
+            ))}
+          </div>
+
+          {/* Size */}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+            {sizeOptions.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onChange({ ...block, size: value })}
+                className={[
+                  "px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all",
+                  currentSize === value
+                    ? "bg-white text-black shadow"
+                    : "text-gray-400 hover:text-gray-600",
+                ].join(" ")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Weight */}
+          <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+            {weightOptions.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onChange({ ...block, weight: value })}
+                className={[
+                  "px-2.5 py-1.5 rounded-md text-xs transition-all",
+                  `font-${value}`,
+                  currentWeight === value
+                    ? "bg-white text-black shadow"
+                    : "text-gray-400 hover:text-gray-600",
+                ].join(" ")}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
+
         <textarea
           rows={4}
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all resize-none placeholder:text-gray-400 font-bold text-2xl"
-          placeholder="Bold text block…"
+          className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all resize-none placeholder:text-gray-400"
+          placeholder="Text block content…"
           value={block.content}
           onChange={(e) =>
             onChange({ ...block, content: e.target.value })

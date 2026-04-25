@@ -6,7 +6,7 @@ import type { SiteSettings } from "../schema";
 import { TextInput, Textarea, Button } from "../ui/Inputs";
 import { ImageUploader } from "../ui/ImageUploader";
 import {
-  User, Briefcase, Plus, Trash2, Tag, GraduationCap, Wrench, BarChart2, ImageIcon,
+  User, Briefcase, Plus, Trash2, Tag, GraduationCap, Wrench, BarChart2, ImageIcon, Type,
 } from "lucide-react";
 
 // ─── Shared ───────────────────────────────────────────────────────────────────
@@ -349,6 +349,30 @@ export function AboutTab({ form }: { form: UseFormReturn<SiteSettings> }) {
               </button>
             </div>
           ))}
+        </div>
+      </SectionCard>
+
+      {/* ── Section Titles ── */}
+      <SectionCard title="Section Titles" icon={<Type size={14} />}>
+        <p className="text-xs text-gray-400 mb-4">
+          Customize the section headings shown on your About page.
+        </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <Field label="Experience heading">
+            <TextInput placeholder="Experience" {...form.register("about.sectionTitles.experience")} />
+          </Field>
+          <Field label="Education heading">
+            <TextInput placeholder="Education" {...form.register("about.sectionTitles.education")} />
+          </Field>
+          <Field label="Skills heading">
+            <TextInput placeholder="Skills & Focus" {...form.register("about.sectionTitles.skills")} />
+          </Field>
+          <Field label="Tools heading">
+            <TextInput placeholder="Tools" {...form.register("about.sectionTitles.tools")} />
+          </Field>
+          <Field label="Stats / Numbers heading">
+            <TextInput placeholder="By the numbers" {...form.register("about.sectionTitles.numbers")} />
+          </Field>
         </div>
       </SectionCard>
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
+import { requireAdminApi } from "@/server/auth/apiGuard";
 
 const PLACEHOLDER_ARTICLES = [
   {
@@ -217,6 +218,9 @@ The most successful rebrands maintain a thread of continuity that allows existin
 ];
 
 export async function POST() {
+  const deny = await requireAdminApi();
+  if (deny) return deny;
+
   try {
     const batch = adminDb.batch();
     let seeded = 0;

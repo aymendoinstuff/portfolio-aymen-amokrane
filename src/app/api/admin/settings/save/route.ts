@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { SettingsSchema } from "@/app/admin/settings/schema";
+import { requireAdminApi } from "@/server/auth/apiGuard";
 
 // For now, accept any request (in production, add auth)
 // If you have getCurrentUser or similar auth, add it here
 export async function POST(req: NextRequest) {
+  const deny = await requireAdminApi();
+  if (deny) return deny;
+
   try {
     const data = await req.json();
 
