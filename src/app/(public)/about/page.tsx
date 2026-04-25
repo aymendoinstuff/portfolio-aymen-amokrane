@@ -65,23 +65,63 @@ export default async function AboutPage() {
         </p>
       </section>
 
-      {/* ── Experience ── */}
-      {experiences.length > 0 && (
-        <section className={`${container} pb-10`}>
-          <SectionTitle>{sectionTitles?.experience || "Experience"}</SectionTitle>
-          <div className="divide-y divide-black/40">
-            {experiences.map((e, i) => (
-              <div key={i} className="py-4">
-                <div className="flex items-baseline justify-between gap-4">
-                  <div className="font-medium">{e.role} — {e.company}</div>
-                  <div className="text-xs opacity-70">{e.period}</div>
-                </div>
-                {e.desc && <p className="text-sm opacity-80 mt-1">{e.desc}</p>}
+      {/* ── Experience + Numbers (side by side) ── */}
+      <section className={`${container} pb-16`}>
+        <div className="grid md:grid-cols-[3fr_2fr] gap-12 lg:gap-20 items-start">
+
+          {/* Left: Experience */}
+          {experiences.length > 0 && (
+            <div>
+              <SectionTitle>{sectionTitles?.experience || "Experience"}</SectionTitle>
+              <div className="divide-y divide-black/40">
+                {experiences.map((e, i) => (
+                  <div key={i} className="py-4">
+                    <div className="flex items-baseline justify-between gap-4">
+                      <div className="font-semibold">{e.role} — {e.company}</div>
+                      <div className="text-xs opacity-70 shrink-0">{e.period}</div>
+                    </div>
+                    {e.desc && <p className="text-sm opacity-80 mt-1">{e.desc}</p>}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+            </div>
+          )}
+
+          {/* Right: By the numbers — bento grid */}
+          {stats.length > 0 && (
+            <div>
+              <SectionTitle>{sectionTitles?.numbers || "By the numbers"}</SectionTitle>
+              <div className="grid grid-cols-2 gap-3">
+                {stats.map((s, i) => {
+                  // First card spans full width when total is odd
+                  const featured = i === 0 && stats.length % 2 !== 0;
+                  return (
+                    <div
+                      key={i}
+                      className={[
+                        "bg-white border border-gray-200 rounded-2xl px-5 py-6 flex flex-col justify-between select-none transition-transform hover:-translate-y-0.5",
+                        featured ? "col-span-2 flex-row items-center gap-6" : "",
+                      ].join(" ")}
+                    >
+                      <div className={[
+                        "font-extrabold tracking-tight leading-none text-black",
+                        featured ? "text-6xl md:text-7xl" : "text-4xl md:text-5xl mb-3",
+                      ].join(" ")}>
+                        <CountUp value={s.v} suffix={s.suffix} />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-sm leading-snug text-black">{s.k}</div>
+                        {s.sub && <div className="text-xs text-gray-400 mt-0.5">{s.sub}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+        </div>
+      </section>
 
       {/* ── Education / Skills / Tools ── */}
       {(education.length > 0 || skills.length > 0 || tools.length > 0) && (
@@ -110,26 +150,6 @@ export default async function AboutPage() {
               </div>
             </div>
           )}
-        </section>
-      )}
-
-      {/* ── Numbers ── */}
-      {stats.length > 0 && (
-        <section>
-          <div className={`${container} py-16`}>
-            <SectionTitle>{sectionTitles?.numbers || "By the numbers"}</SectionTitle>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {stats.map((s, i) => (
-                <div key={i} className="bg-white border border-gray-200 rounded-2xl px-6 py-7 flex flex-col select-none">
-                  <div className="text-5xl md:text-6xl font-extrabold tracking-tight leading-none mb-4">
-                    <CountUp value={s.v} suffix={s.suffix} />
-                  </div>
-                  <div className="font-semibold text-base leading-snug">{s.k}</div>
-                  {s.sub && <div className="text-sm text-gray-400 mt-1">{s.sub}</div>}
-                </div>
-              ))}
-            </div>
-          </div>
         </section>
       )}
     </main>
